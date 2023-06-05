@@ -1,24 +1,16 @@
-# -*- coding: utf-8 -*-
-"""
-@author: sfmt4368 (Simon), texa5140 (Cosmin), minh.nguyen@ikm.uni-hannover.de
-
-Implements the 1D Bar nonlinear
-"""
-
 import torch
 from torch.autograd import grad
 import numpy as np
 import numpy.random as npr
-from matplotlib import cm
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 import time
-from mpl_toolkits.mplot3d import Axes3D
 from pyevtk.hl import gridToVTK
-import scipy as sp
+# import scipy as sp
 # from graphviz import Digraph
-import torch
-from torch.autograd import Variable
+# from matplotlib import cm
+# from mpl_toolkits.mplot3d import Axes3D
+# from torch.autograd import Variable
 # make_dot was moved to https://github.com/szagoruyko/pytorchviz
 # from torchviz import make_dot
 
