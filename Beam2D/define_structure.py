@@ -1,5 +1,7 @@
-from dem_hyperelasticity.config import *
-from dem_hyperelasticity.Beam2D.config import *
+from config import *
+from Beam2D.config import *
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 def setup_domain():
@@ -18,12 +20,12 @@ def setup_domain():
         dom[tb:te, 1] = lin_y
     print(dom.shape)
     np.meshgrid(lin_x, lin_y)
-    fig = plt.figure(figsize=(5, 1))
+    fig = plt.figure(figsize=(8, 3))
     ax = fig.add_subplot(111)
-    ax.scatter(dom[:, 0], dom[:, 1], s=0.005, facecolor='blue')
-    ax.set_xlabel('X', fontsize=3)
-    ax.set_ylabel('Y', fontsize=3)
-    ax.tick_params(labelsize=4)
+    ax.scatter(dom[:, 0], dom[:, 1], s=0.05, facecolor='blue')
+    ax.set_xlabel('X', fontsize=13)
+    ax.set_ylabel('Y', fontsize=13)
+    ax.tick_params(labelsize=14)
     # ------------------------------------ BOUNDARY ----------------------------------------
     # Left boundary condition (Dirichlet BC)
     bcl_u_pts_idx = np.where(dom[:, 0] == x_min)
@@ -38,6 +40,7 @@ def setup_domain():
     ax.scatter(dom[:, 0], dom[:, 1], s=0.005, facecolor='blue')
     ax.scatter(bcl_u_pts[:, 0], bcl_u_pts[:, 1], s=0.5, facecolor='red')
     ax.scatter(bcr_t_pts[:, 0], bcr_t_pts[:, 1], s=0.5, facecolor='green')
+    plt.tight_layout()
     plt.show()
     # exit()
     boundary_neumann = {

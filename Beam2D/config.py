@@ -21,7 +21,7 @@ known_left_uy = 0
 bc_left_penalty = 1.0
 
 known_right_tx = 0
-known_right_ty = -5.0
+known_right_ty = +5.0
 bc_right_penalty = 1.0
 # ------------------------------ define domain and collocation points -------------------------------
 Nx = 200 # 120  # 120

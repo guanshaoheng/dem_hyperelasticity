@@ -4,13 +4,14 @@
 Implements the 2D Hyperelastic beam models (Neo-Hookean)
 """
 
-from dem_hyperelasticity.Beam2D import define_structure as des
-from dem_hyperelasticity.MultiLayerNet import *
-from dem_hyperelasticity import EnergyModel as md
-from dem_hyperelasticity import Utility as util
-from dem_hyperelasticity.Beam2D import config as cf
-from dem_hyperelasticity.IntegrationLoss import *
-from dem_hyperelasticity.EnergyModel import *
+
+from Beam2D import define_structure as des
+from MultiLayerNet import *
+import EnergyModel as md
+import Utility as util
+from Beam2D import config as cf
+from IntegrationLoss import *
+from EnergyModel import *
 import numpy as np
 import time
 import torch
@@ -143,9 +144,9 @@ class DeepEnergyMethod:
             xy_tensor.requires_grad_(True)
             # u_pred_torch = self.model(xy_tensor)
             u_pred_torch = self.getU(xy_tensor)
-            duxdxy = grad(u_pred_torch[:, 0].unsqueeze(1), xy_tensor, torch.ones(xy_tensor.size()[0], 1, device=dev),
+            duxdxy = torch.autograd.grad(u_pred_torch[:, 0].unsqueeze(1), xy_tensor, torch.ones(xy_tensor.size()[0], 1, device=dev),
                            create_graph=True, retain_graph=True)[0]
-            duydxy = grad(u_pred_torch[:, 1].unsqueeze(1), xy_tensor, torch.ones(xy_tensor.size()[0], 1, device=dev),
+            duydxy = torch.autograd.grad(u_pred_torch[:, 1].unsqueeze(1), xy_tensor, torch.ones(xy_tensor.size()[0], 1, device=dev),
                            create_graph=True, retain_graph=True)[0]
             F11 = duxdxy[:, 0].unsqueeze(1) + 1
             F12 = duxdxy[:, 1].unsqueeze(1) + 0
@@ -228,11 +229,11 @@ class DeepEnergyMethod:
             xyz_tensor.requires_grad_(True)
             # u_pred_torch = self.model(xyz_tensor)
             u_pred_torch = self.getU(xyz_tensor)
-            duxdxyz = grad(u_pred_torch[:, 0].unsqueeze(1), xyz_tensor, torch.ones(xyz_tensor.size()[0], 1, device=dev),
+            duxdxyz = torch.autograd.grad(u_pred_torch[:, 0].unsqueeze(1), xyz_tensor, torch.ones(xyz_tensor.size()[0], 1, device=dev),
                            create_graph=True, retain_graph=True)[0]
-            duydxyz = grad(u_pred_torch[:, 1].unsqueeze(1), xyz_tensor, torch.ones(xyz_tensor.size()[0], 1, device=dev),
+            duydxyz = torch.autograd.grad(u_pred_torch[:, 1].unsqueeze(1), xyz_tensor, torch.ones(xyz_tensor.size()[0], 1, device=dev),
                            create_graph=True, retain_graph=True)[0]
-            duzdxyz = grad(u_pred_torch[:, 2].unsqueeze(1), xyz_tensor, torch.ones(xyz_tensor.size()[0], 1, device=dev),
+            duzdxyz = torch.autograd.grad(u_pred_torch[:, 2].unsqueeze(1), xyz_tensor, torch.ones(xyz_tensor.size()[0], 1, device=dev),
                            create_graph=True, retain_graph=True)[0]
             F11 = duxdxyz[:, 0].unsqueeze(1) + 1
             F12 = duxdxyz[:, 1].unsqueeze(1) + 0

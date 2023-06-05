@@ -1,4 +1,4 @@
-from dem_hyperelasticity.config import *
+from import_file import *
 
 
 class EnergyModel:
@@ -28,9 +28,9 @@ class EnergyModel:
                 return self.MooneyRivlin3D(u, x)
 
     def MooneyRivlin3D(self, u, x):
-        duxdxyz = grad(u[:, 0].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
-        duydxyz = grad(u[:, 1].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
-        duzdxyz = grad(u[:, 2].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
+        duxdxyz = torch.autograd.grad(u[:, 0].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
+        duydxyz = torch.autograd.grad(u[:, 1].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
+        duzdxyz = torch.autograd.grad(u[:, 2].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
         Fxx = duxdxyz[:, 0].unsqueeze(1) + 1
         Fxy = duxdxyz[:, 1].unsqueeze(1) + 0
         Fxz = duxdxyz[:, 2].unsqueeze(1) + 0
@@ -61,8 +61,8 @@ class EnergyModel:
 
 
     def MooneyRivlin2D(self, u, x):
-        duxdxy = grad(u[:, 0].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
-        duydxy = grad(u[:, 1].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
+        duxdxy = torch.autograd.grad(u[:, 0].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
+        duydxy = torch.autograd.grad(u[:, 1].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
         Fxx = duxdxy[:, 0].unsqueeze(1) + 1
         Fxy = duxdxy[:, 1].unsqueeze(1) + 0
         Fyx = duydxy[:, 0].unsqueeze(1) + 0
@@ -84,9 +84,9 @@ class EnergyModel:
     # Purpose: calculate Neo-Hookean potential energy in 3D
     # ---------------------------------------------------------------------------------------
     def NeoHookean3D(self, u, x):
-        duxdxyz = grad(u[:, 0].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
-        duydxyz = grad(u[:, 1].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
-        duzdxyz = grad(u[:, 2].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
+        duxdxyz = torch.autograd.grad(u[:, 0].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
+        duydxyz = torch.autograd.grad(u[:, 1].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
+        duzdxyz = torch.autograd.grad(u[:, 2].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
         Fxx = duxdxyz[:, 0].unsqueeze(1) + 1
         Fxy = duxdxyz[:, 1].unsqueeze(1) + 0
         Fxz = duxdxyz[:, 2].unsqueeze(1) + 0
@@ -105,8 +105,8 @@ class EnergyModel:
     # Purpose: calculate Neo-Hookean potential energy in 2D
     # ---------------------------------------------------------------------------------------
     def NeoHookean2D(self, u, x):
-        duxdxy = grad(u[:, 0].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
-        duydxy = grad(u[:, 1].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
+        duxdxy = torch.autograd.grad(u[:, 0].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
+        duydxy = torch.autograd.grad(u[:, 1].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
         Fxx = duxdxy[:, 0].unsqueeze(1) + 1
         Fxy = duxdxy[:, 1].unsqueeze(1) + 0
         Fyx = duydxy[:, 0].unsqueeze(1) + 0

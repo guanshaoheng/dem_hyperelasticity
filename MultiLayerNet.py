@@ -1,4 +1,4 @@
-from dem_hyperelasticity.config import *
+from import_file import *
 
 
 class MultiLayerNet(torch.nn.Module):

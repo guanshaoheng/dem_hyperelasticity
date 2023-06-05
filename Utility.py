@@ -1,4 +1,4 @@
-from dem_hyperelasticity.importlib import *
+from import_file import *
 import scipy.integrate as sp
 
 # convert numpy BCs to torch
@@ -32,7 +32,7 @@ def write_vtk_v2(filename, x_space, y_space, z_space, U, S11, S12, S13, S22, S23
                                                "E11": E11, "E12": E12, "E13": E13, \
                                                "E22": E22, "E23": E23, "E33": E33\
                                                })
-    # gridToVTK(filename, xx, yy, zz, pointData={"displacement": U})
+    gridToVTK(filename+'_deformed', xx+U[0], yy+U[1], zz+U[2], pointData={"displacement": U})
 
 
 # --------------------------------------------------------------------------------

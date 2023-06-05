@@ -4,13 +4,13 @@
 Implements the 2D Hyperelastic beam models (Neo-Hookean)
 """
 
-from dem_hyperelasticity.Beam2D import define_structure as des
-from dem_hyperelasticity.MultiLayerNet import *
-from dem_hyperelasticity import EnergyModel as md
-from dem_hyperelasticity import Utility as util
-from dem_hyperelasticity.Beam2D import config as cf
-from dem_hyperelasticity.IntegrationLoss import *
-from dem_hyperelasticity.EnergyModel import *
+from Beam2D import define_structure as des
+from MultiLayerNet import *
+import EnergyModel as md
+import Utility as util
+from Beam2D import config as cf
+from IntegrationLoss import *
+from EnergyModel import *
 import numpy as np
 import time
 import torch
@@ -72,7 +72,9 @@ class DeepEnergyMethod:
         # ----------------------------------------------------------------------------------
         # Minimizing loss function (energy and boundary conditions)
         # ----------------------------------------------------------------------------------
-        optimizer = torch.optim.LBFGS(self.model.parameters(), lr=learning_rate, max_iter=20)
+        # the LBFGS optimizer is better than Adam as Adam can not reach the global optimum
+        optimizer = torch.optim.LBFGS(self.model.parameters(), lr=learning_rate, max_iter=20) #
+        # optimizer = torch.optim.Adam(self.model.parameters()); iteration=3000
         start_time = time.time()
         energy_loss_array = []
         boundary_loss_array = []
@@ -88,15 +90,21 @@ class DeepEnergyMethod:
                 u_pred.double()
                 storedEnergy = self.energy.getStoredEnergy(u_pred, x)
                 internal2 = self.intLoss.lossInternalEnergy(storedEnergy, dx=dxdydz[0], dy=dxdydz[1], shape=shape)
+
+                # neumann boundary condition
                 external2 = torch.zeros(len(neuBC_coordinates))
                 for i, vali in enumerate(neuBC_coordinates):
                     neu_u_pred = self.getU(neuBC_coordinates[i])
-                    fext = torch.bmm((neu_u_pred + neuBC_coordinates[i]).unsqueeze(1), neuBC_values[i].unsqueeze(2))
+                    # fext = torch.bmm((neu_u_pred + neuBC_coordinates[i]).unsqueeze(1), neuBC_values[i].unsqueeze(2))
+                    fext = torch.einsum('ij, ij->i', neu_u_pred + neuBC_coordinates[i], neuBC_values[i])
                     external2[i] = self.intLoss.lossExternalEnergy(fext, dx=dxdydz[1])
+
+                # dirichlet boundary condition
                 bc_u_crit = torch.zeros((len(dirBC_coordinates)))
                 for i, vali in enumerate(dirBC_coordinates):
                     dir_u_pred = self.getU(dirBC_coordinates[i])
                     bc_u_crit[i] = self.loss_squared_sum(dir_u_pred, dirBC_values[i])
+
                 energy_loss = internal2 - torch.sum(external2)
                 boundary_loss = torch.sum(bc_u_crit)
                 loss = energy_loss + boundary_loss
@@ -145,9 +153,9 @@ class DeepEnergyMethod:
             xy_tensor = xy_tensor.to(dev)
             xy_tensor.requires_grad_(True)
             u_pred_torch = self.getU(xy_tensor)
-            duxdxy = grad(u_pred_torch[:, 0].unsqueeze(1), xy_tensor, torch.ones(xy_tensor.size()[0], 1, device=dev),
+            duxdxy = torch.autograd.grad(u_pred_torch[:, 0].unsqueeze(1), xy_tensor, torch.ones(xy_tensor.size()[0], 1, device=dev),
                            create_graph=True, retain_graph=True)[0]
-            duydxy = grad(u_pred_torch[:, 1].unsqueeze(1), xy_tensor, torch.ones(xy_tensor.size()[0], 1, device=dev),
+            duydxy = torch.autograd.grad(u_pred_torch[:, 1].unsqueeze(1), xy_tensor, torch.ones(xy_tensor.size()[0], 1, device=dev),
                            create_graph=True, retain_graph=True)[0]
             F11 = duxdxy[:, 0].unsqueeze(1) + 1
             F12 = duxdxy[:, 1].unsqueeze(1) + 0
@@ -193,7 +201,7 @@ class DeepEnergyMethod:
             S22_pred = S22.detach().cpu().numpy()
             surUx = u_pred[:, 0].reshape(Ny, Nx, 1)
             surUy = u_pred[:, 1].reshape(Ny, Nx, 1)
-            surUz = np.zeros([Nx, Ny, 1])
+            surUz = np.zeros_like(surUy)
             surE11 = E11_pred.reshape(Ny, Nx, 1)
             surE12 = E12_pred.reshape(Ny, Nx, 1)
             surE13 = np.zeros([Nx, Ny, 1])
@@ -230,11 +238,11 @@ class DeepEnergyMethod:
             xyz_tensor.requires_grad_(True)
             # u_pred_torch = self.model(xyz_tensor)
             u_pred_torch = self.getU(xyz_tensor)
-            duxdxyz = grad(u_pred_torch[:, 0].unsqueeze(1), xyz_tensor, torch.ones(xyz_tensor.size()[0], 1, device=dev),
+            duxdxyz = torch.autograd.grad(u_pred_torch[:, 0].unsqueeze(1), xyz_tensor, torch.ones(xyz_tensor.size()[0], 1, device=dev),
                            create_graph=True, retain_graph=True)[0]
-            duydxyz = grad(u_pred_torch[:, 1].unsqueeze(1), xyz_tensor, torch.ones(xyz_tensor.size()[0], 1, device=dev),
+            duydxyz = torch.autograd.grad(u_pred_torch[:, 1].unsqueeze(1), xyz_tensor, torch.ones(xyz_tensor.size()[0], 1, device=dev),
                            create_graph=True, retain_graph=True)[0]
-            duzdxyz = grad(u_pred_torch[:, 2].unsqueeze(1), xyz_tensor, torch.ones(xyz_tensor.size()[0], 1, device=dev),
+            duzdxyz = torch.autograd.grad(u_pred_torch[:, 2].unsqueeze(1), xyz_tensor, torch.ones(xyz_tensor.size()[0], 1, device=dev),
                            create_graph=True, retain_graph=True)[0]
             F11 = duxdxyz[:, 0].unsqueeze(1) + 1
             F12 = duxdxyz[:, 1].unsqueeze(1) + 0
@@ -403,7 +411,7 @@ if __name__ == '__main__':
     dem.train_model(shape, dxdy, dom, boundary_neumann, boundary_dirichlet, cf.iteration, cf.lr)
     end_time = time.time() - start_time
     print("End time: %.5f" % end_time)
-    z = np.array([0])
+    z = np.array([0.])
     U, S11, S12, S13, S22, S23, S33, E11, E12, E13, E22, E23, E33, SVonMises, F11, F12, F21, F22 = dem.evaluate_model(x, y, z)
     util.write_vtk_v2(cf.filename_out, x, y, z, U, S11, S12, S13, S22, S23, S33, E11, E12, E13, E22, E23, E33, SVonMises)
     surUx, surUy, surUz = U

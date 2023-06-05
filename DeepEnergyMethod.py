@@ -1,8 +1,8 @@
-from dem_hyperelasticity.importlib import *
-from dem_hyperelasticity import Utility as util
-from dem_hyperelasticity.IntegrationLoss import *
-from dem_hyperelasticity.MultiLayerNet import *
-from dem_hyperelasticity.EnergyModel import *
+from import_file import *
+import Utility as util
+from IntegrationLoss import *
+from MultiLayerNet import *
+from EnergyModel import *
 
 
 class DeepEnergyMethod:
