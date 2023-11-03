@@ -27,6 +27,7 @@ class MaterialModel:
 
     def getEnergyBar1D(self, u, x):
         dudx = grad(u, x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]            # 计算位移对位置的一阶导数
+        # 如果在第一步的创建网络时候不将网络的偏置设置为0，则在此处可能得到 dudx<-1，则计算会出现NAN
         energy = (1 + dudx) ** (3/2) - 3/2*dudx - 1                                                                   # 计算每个点的应变能密度
         return energy
 
@@ -54,9 +55,6 @@ def get_datatest(x_min, Length, num_test_x):
     return np.sort(np.random.uniform(x_min, Length, size=num_test_x))[:, np.newaxis]
 
 
-
-
-
 # --------------------------------------------------------------------------
 #           NEURAL NETWORK CLASS
 # --------------------------------------------------------------------------
@@ -67,9 +65,15 @@ class MultiLayerNet(torch.nn.Module):
         member variables.
         """
         super(MultiLayerNet, self).__init__()
-        self.linear1 = torch.nn.Linear(D_in, H)
-        self.linear2 = torch.nn.Linear(H, D_out)
+        self.linear1 = torch.nn.Linear(D_in, H, bias=True)
+        # self.linear1_1 = torch.nn.Linear(H, H, bias=True)
+        # self.linear1_2 = torch.nn.Linear(H, H, bias=True)
+        self.linear2 = torch.nn.Linear(H, D_out, bias=True)
+
+        # 为什么要把此处的偏置初始化为0, 如果此处不置为0，则在计算dudx的时候会小于-1，则计算能量密度的时候会出现NAN
         torch.nn.init.constant_(self.linear1.bias, 0.)
+        # torch.nn.init.constant_(self.linear1_1.bias, 0.)
+        # torch.nn.init.constant_(self.linear1_2.bias, 0.)
         torch.nn.init.constant_(self.linear2.bias, 0.)
 
     def forward(self, x):
@@ -79,8 +83,21 @@ class MultiLayerNet(torch.nn.Module):
         well as arbitrary operators on Tensors.
         """
         y1 = torch.tanh(self.linear1(x))
+        # y1 = torch.tanh(self.linear1_1(y1))
+        # y1 = torch.tanh(self.linear1_2(y1))
         y = self.linear2(y1)
+
+        # # cal the dydx
+        # dydx_grad = grad(y, x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
+        # dydx = torch.einsum('ij, jk->ki', self.linear2.weight, (1-torch.tanh(self.linear1(x))**2).T * self.linear1.weight)
         return y
+    
+    def dydx(self, x):
+        y = self.linear2(torch.tanh(self.linear1(x)))
+
+        dydx = grad(y, x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
+
+        return y, dydx
 
 
 # --------------------------------------------------------------------------------
@@ -194,15 +211,15 @@ class DeepEnergyMethod:
                 slice2 = self.tupleset(slice2, axis, -2)
                 if x is not None:
                     last_dx = x[slice1] - x[slice2]
-                val += 0.5 * last_dx * (y[slice1] + y[slice2])
-                result = self._basic_simps(y, 0, N - 3, x, dx, axis)
+                val += 0.5 * last_dx * (y[slice1] + y[slice2])  # 最后一个区间使用梯形公式
+                result += self._basic_simps(y, 0, N - 3, x, dx, axis)
             # Compute using Simpson's rule on last set of intervals
             if even in ['avg', 'last']:
                 slice1 = self.tupleset(slice1, axis, 0)
                 slice2 = self.tupleset(slice2, axis, 1)
                 if x is not None:
                     first_dx = x[tuple(slice2)] - x[tuple(slice1)]
-                val += 0.5 * first_dx * (y[slice2] + y[slice1])
+                val += 0.5 * first_dx * (y[slice2] + y[slice1]) # 第一个区间使用梯形公式
                 result += self._basic_simps(y, 1, N - 2, x, dx, axis)
             if even == 'avg':
                 val /= 2.0
@@ -214,7 +231,10 @@ class DeepEnergyMethod:
             x = x.reshape(saveshape)
         return result
 
-    def tupleset(self, t, i, value):
+    def tupleset(self, t: tuple, i: int, value: slice)->tuple:
+        """
+            Change the i-th element in the tuple to value 
+        """
         l = list(t)
         l[i] = value
         return tuple(l)
@@ -268,6 +288,8 @@ class DeepEnergyMethod:
 
     def __trapz(self, y, x=None, dx=1.0, axis=-1):
         # y = np.asanyarray(y)
+        """
+        # 原 代码
         if x is None:
             d = dx
         else:
@@ -283,6 +305,12 @@ class DeepEnergyMethod:
         slice2[axis] = slice(None, -1)
         ret = torch.sum(d * (y[tuple(slice1)] + y[tuple(slice2)]) / 2.0, axis)
         return ret
+        """
+        if x is None:
+            d = dx
+        else:
+            d = x[1:] - x[:-1]
+        return torch.sum(d * (y[:-1] + y[1:])*0.5)
 
     def trapz1D(self, y, x=None, dx=1.0, axis=-1):
         y1D = y.flatten()

@@ -58,8 +58,6 @@ model_energy = 'Bar1D'             # simu name
 
 # ----------------------------- define structural parameters ---------------------------------------
 Length = 1.0                       # 长度
-Height = 1.0                       # 高度
-Depth = 1.0                        # 深度
 known_left_ux = 0                  # 
 bc_left_penalty = 1.0              #
         
@@ -100,7 +98,7 @@ if __name__ == '__main__':
     error_L2_DEMS = np.linalg.norm(exact_solution - u_pred_dems, 2) / np.linalg.norm(exact_solution, 2)
     error_H1_DEMS = np.linalg.norm(exact_eps - eps_pred_dems, 2) / np.linalg.norm(exact_eps, 2)
     
-    # 优化模型中采用 trapezoidal 积分
+    # 优化模型中采用 trapezoidal 积分  梯形公式积分
     demt = DeepEnergyMethod(D_in, H, D_out, xmin=x_min, length=Length)
     time_demt = time.time()
     demt.train_model(dom, mat, iteration, model_energy, 'trapezoidal', learning_rate)
@@ -109,7 +107,7 @@ if __name__ == '__main__':
     error_L2_DEMT = np.linalg.norm(exact_solution - u_pred_demt, 2) / np.linalg.norm(exact_solution, 2)
     error_H1_DEMT = np.linalg.norm(exact_eps - eps_pred_demt, 2) / np.linalg.norm(exact_eps, 2)
 
-    # 优化模型中采用 montecarlo 积分
+    # 优化模型中采用 montecarlo 积分  
     demm = DeepEnergyMethod(D_in, H, D_out, xmin=x_min, length=Length)
     time_demm = time.time()
     demm.train_model(dom, mat, iteration, model_energy, 'montecarlo', learning_rate)
