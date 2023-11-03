@@ -1,5 +1,5 @@
 from import_file import *
-from Beam3D.config import *
+from config import *
 
 
 def setup_domain():

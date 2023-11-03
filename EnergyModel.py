@@ -26,6 +26,8 @@ class EnergyModel:
                 return self.MooneyRivlin2D(u, x)
             if self.dim == 3:
                 return self.MooneyRivlin3D(u, x)
+        if self.type == "degraded":
+            raise RuntimeError("The mode degraded is current under preparation") 
 
     def MooneyRivlin3D(self, u, x):
         duxdxyz = torch.autograd.grad(u[:, 0].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
