@@ -1,4 +1,7 @@
 from import_file import *
+from constitutive.cons import DegradedCons
+import config as cf
+from Utility import cal_jacobian
 
 
 class EnergyModel:
@@ -9,11 +12,17 @@ class EnergyModel:
         if self.type == 'neohookean':
             self.mu = E / (2 * (1 + nu))
             self.lam = (E * nu) / ((1 + nu) * (1 - 2 * nu))
-        if self.type == 'mooneyrivlin':
+        elif self.type == 'mooneyrivlin':
             self.param_c1 = param_c1
             self.param_c2 = param_c2
             self.param_c = param_c
             self.param_d = 2 * (self.param_c1 + 2 * self.param_c2)
+        elif self.type == 'degraded':
+            self.cons = DegradedCons(phi=cf.phi, theta=cf.theta)
+        else:
+            raise RuntimeError
+        self.I = torch.eye(3, device=dev, dtype=torch.float32).view(1, 3, 3).repeat(cf.numg, 1, 1)
+
 
     def getStoredEnergy(self, u, x):
         if self.type == 'neohookean':
@@ -26,9 +35,11 @@ class EnergyModel:
                 return self.MooneyRivlin2D(u, x)
             if self.dim == 3:
                 return self.MooneyRivlin3D(u, x)
+        elif self.type == "degraded":
+            if self.dim == 3:
+                return self.degraded3D(u, x)
         else:
             raise RuntimeError("There is no type of %s" % self.type)
-        
 
     def MooneyRivlin3D(self, u, x):
         duxdxyz = torch.autograd.grad(u[:, 0].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
@@ -117,4 +128,29 @@ class EnergyModel:
         detF = Fxx * Fyy - Fxy * Fyx
         trC = Fxx ** 2 + Fxy ** 2 + Fyx ** 2 + Fyy ** 2
         strainEnergy = 0.5 * self.lam * (torch.log(detF) * torch.log(detF)) - self.mu * torch.log(detF) + 0.5 * self.mu * (trC - 2)
+        return strainEnergy
+
+    # ---------------------------------------------------------------------------------------
+    # Purpose: calculate degraded potential energy in 3D
+    # Shaoheng Guan shaohengguan@gmail.com
+    # ---------------------------------------------------------------------------------------
+    def degraded3D(self, u, x):
+        # F = torch.zeros(size=[len(u), 3, 3])
+        # duxdxyz = torch.autograd.grad(u[:, 0].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
+        # duydxyz = torch.autograd.grad(u[:, 1].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
+        # duzdxyz = torch.autograd.grad(u[:, 2].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
+        # F[:, 0, 0] = duxdxyz[:, 0] + 1 # = Fxx 
+        # F[:, 0, 1] = duxdxyz[:, 1] + 0 # = Fxy 
+        # F[:, 0, 2] = duxdxyz[:, 2] + 0 # = Fxz 
+        # F[:, 1, 0] = duydxyz[:, 0] + 0 # = Fyx 
+        # F[:, 1, 1] = duydxyz[:, 1] + 1 # = Fyy 
+        # F[:, 1, 2] = duydxyz[:, 2] + 0 # = Fyz 
+        # F[:, 2, 0] = duzdxyz[:, 0] + 0 # = Fzx 
+        # F[:, 2, 1] = duzdxyz[:, 1] + 0 # = Fzy 
+        # F[:, 2, 2] = duzdxyz[:, 2] + 1 # = Fzz 
+
+        FF = cal_jacobian(inputs=x, outputs=u) + self.I
+
+        strainEnergy = torch.stack([self.cons.total_energy(FF[i]) for i in range(cf.numg)])
+        
         return strainEnergy

@@ -152,4 +152,16 @@ def getH10norm2D(F11, F12, F21, F22, Nx, Ny, hx, hy):
     # H10norm = np.sqrt(sp.simps(sp.simps(FinnerFTensor, dx=hy), dx=hx))
     return H10norm
 
+def cal_jacobian(inputs, outputs):
+    """
+        inputs:  num_samples,  input_features
+        outputs: num_samples, output_features
+
+        return: nums_samples, out_features, in_features
+    """
+    return torch.stack(
+        [torch.autograd.grad(outputs[:, i].unsqueeze(1), inputs, grad_outputs=torch.ones(size=[len(outputs), 1]),
+                              retain_graph=True, create_graph=True)[0] 
+            for i in range(outputs.size(1))], dim=-1).permute(0, 2, 1)
+
 

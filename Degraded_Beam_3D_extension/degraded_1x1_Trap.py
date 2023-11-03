@@ -98,8 +98,8 @@ class DeepEnergyMethod:
                 loss = internal2 - torch.sum(external2) + boundary_loss
                 optimizer.zero_grad()
                 loss.backward()
-                print('Iter: %d Loss: %.9e Energy: %.9e Boundary: %.9e Time: %.3e'
-                      % (t + 1, loss.item(), energy_loss.item(), boundary_loss.item(), time.time() - it_time))
+                print('Iter: %d Loss: %.9e Energy: %.9e Boundary: %.9e Time: %.3e mins'
+                      % (t + 1, loss.item(), energy_loss.item(), boundary_loss.item(), (time.time() - it_time)/60.))
                 energy_loss_array.append(energy_loss.data)
                 boundary_loss_array.append(boundary_loss.data)
                 loss_array.append(loss.data)
@@ -391,14 +391,14 @@ if __name__ == '__main__':
     # ----------------------------------------------------------------------
     #                   STEP 2: SETUP MODEL
     # ----------------------------------------------------------------------
-    mat = md.EnergyModel('neohookean', 3, cf.E, cf.nu)
+    mat = md.EnergyModel(cf.model_energy, 3, cf.E, cf.nu)
     dem = DeepEnergyMethod([cf.D_in, cf.H, cf.D_out], 'trapezoidal', mat, 3)
     # ----------------------------------------------------------------------
     #                   STEP 3: TRAINING MODEL
     # ----------------------------------------------------------------------
     start_time = time.time()
     cf.iteration = 40
-    cf.filename_out = "./output/dem/NeoHook_3Layer_mesh100x25x25_iter40_trap"
+    cf.filename_out = "./output/dem/degraded_3Layer_mesh20x20x4_iter40_trap"
     dem.train_model(cf.shape, cf.dxdydz, dom, boundary_neumann, boundary_dirichlet, cf.iteration, cf.lr)
     end_time = time.time() - start_time
     print("End time: %.5f" % end_time)

@@ -2,7 +2,7 @@ from import_file import *
 from config import *
 
 
-def setup_domain():
+def setup_domain(plot_flag = False):
     x_dom = x_min, Length, Nx
     y_dom = y_min, Height, Ny
     z_dom = z_min, Depth, Nz
@@ -22,14 +22,7 @@ def setup_domain():
             dom[tb:te, 2] = z
     print(dom.shape)
     np.meshgrid(lin_x, lin_y, lin_z)
-    fig = plt.figure(figsize=(8, 6))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(dom[:, 0], dom[:, 1], dom[:, 2], s=0.005, facecolor='blue')
-    ax.set_xlabel('X', fontsize=3)
-    ax.set_ylabel('Y', fontsize=3)
-    ax.set_zlabel('Z', fontsize=3)
-    ax.tick_params(labelsize=4)
-    ax.view_init(elev=120., azim=-90)
+
     # ------------------------------------ BOUNDARY ----------------------------------------
     # Left boundary condition (Dirichlet BC)
     bcl_u_pts_idx = np.where(dom[:, 0] == x_min)
@@ -41,10 +34,21 @@ def setup_domain():
     bcr_t_pts = dom[bcr_t_pts_idx, :][0]
     bcr_t = np.ones(np.shape(bcr_t_pts)) * [known_right_tx, known_right_ty, known_right_tz]
 
-    ax.scatter(dom[:, 0], dom[:, 1], dom[:, 2], s=0.005, facecolor='blue')
-    ax.scatter(bcl_u_pts[:, 0], bcl_u_pts[:, 1], bcl_u_pts[:, 2], s=0.5, facecolor='red')
-    ax.scatter(bcr_t_pts[:, 0], bcr_t_pts[:, 1], bcr_t_pts[:, 2], s=0.5, facecolor='green')
-    plt.show()
+    # ------------------------------------   PLOT   ----------------------------------------
+    if plot_flag:
+        fig = plt.figure(figsize=(8, 6))
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(dom[:, 0], dom[:, 1], dom[:, 2], s=0.005, facecolor='blue')
+        ax.set_xlabel('X', fontsize=3)
+        ax.set_ylabel('Y', fontsize=3)
+        ax.set_zlabel('Z', fontsize=3)
+        ax.tick_params(labelsize=4)
+        ax.view_init(elev=15., azim=-85)
+        ax.scatter(dom[:, 0], dom[:, 1], dom[:, 2], s=0.005, facecolor='blue')
+        ax.scatter(bcl_u_pts[:, 0], bcl_u_pts[:, 1], bcl_u_pts[:, 2], s=0.5, facecolor='red')
+        ax.scatter(bcr_t_pts[:, 0], bcr_t_pts[:, 1], bcr_t_pts[:, 2], s=0.5, facecolor='green')
+        ax.set_aspect('equal')
+        plt.show()
 
     boundary_neumann = {
         # condition on the right

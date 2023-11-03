@@ -1,9 +1,9 @@
 import torch
 import numpy as np
-from utils import rotation_matrix
+from constitutive.utils_cons import rotation_matrix
 
 
-class Cons:
+class DegradedCons:
     def __init__(self, theta: float, phi: float, 
                  K: float=60e3, mu: float=62.1e3, c1: float=56.59e3, c2:float=3.83, failure: float=1.0) -> None:
         """
@@ -163,7 +163,7 @@ class Cons:
         return vol_energy+isochoric_energy, sigma
 
 if __name__ == "__main__":
-    obj = Cons(theta=np.pi*0., phi=np.pi*0., failure=1.0)
+    obj = DegradedCons(theta=np.pi*0., phi=np.pi*0., failure=1.0)
     F = torch.diag(torch.tensor([0.95, 0.95, 1.2], dtype=torch.float32))
     energy = obj.total_energy(F = F)
     energyy, sigma = obj.get_cauchy_stress(F = F)

@@ -9,6 +9,8 @@ import time
 from mpl_toolkits.mplot3d import Axes3D
 from pyevtk.hl import gridToVTK
 import numpy.matlib as ml
+from multiprocessing import Pool
+import torch.multiprocessing as mp
 
 dev = torch.device('cpu')
 if torch.cuda.is_available():

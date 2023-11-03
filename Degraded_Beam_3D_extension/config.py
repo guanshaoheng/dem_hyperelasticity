@@ -12,10 +12,13 @@ param_c1 = 630
 param_c2 = -1.2
 param_c = 10000
 model_energy = 'degraded'
+# 肌肉纤维方向 
+theta = 0.
+phi = 0.
 # ----------------------------- define structural parameters ---------------------------------------
 Length = 1.0
 Height = 1.0
-Depth = 0.5
+Depth = 0.2
 known_left_ux = 0
 known_left_uy = 0
 known_left_uz = 0
@@ -28,7 +31,8 @@ bc_right_penalty = 1.0
 # ------------------------------ define domain and collocation points -------------------------------
 Nx = 20  # 120  # 120
 Ny = 20  # 30  # 60
-Nz = 10  # 30  # 10
+Nz = 4   # 30  # 10
+numg = Nx*Ny*Nz
 x_min, y_min, z_min = (0.0, 0.0, 0.0)
 (hx, hy, hz) = (Length / (Nx - 1), Height / (Ny - 1), Depth / (Nz - 1))
 shape = [Nx, Ny, Nz]
