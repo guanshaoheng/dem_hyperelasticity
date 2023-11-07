@@ -1,4 +1,3 @@
-
 # ------------------------------ network settings ---------------------------------------------------
 iteration = 50
 lr = 0.5
@@ -11,10 +10,11 @@ nu = 0.3
 param_c1 = 630
 param_c2 = -1.2
 param_c = 10000
-model_energy = 'degraded'
+model_energy = 'degraded' # neohookean  degraded
 # 肌肉纤维方向 
 theta = 0.
 phi = 0.
+helth_coefficient = 1.  # 1.0 表示完全健康，0.0表示完全损坏
 # ----------------------------- define structural parameters ---------------------------------------
 Length = 1.0
 Height = 1.0
@@ -25,13 +25,13 @@ known_left_uz = 0
 bc_left_penalty = 1.0
 
 known_right_tx = 0
-known_right_ty = -5.0
-known_right_tz = 0
+known_right_ty = 0
+known_right_tz = -500.
 bc_right_penalty = 1.0
 # ------------------------------ define domain and collocation points -------------------------------
-Nx = 20  # 120  # 120
-Ny = 20  # 30  # 60
-Nz = 4   # 30  # 10
+Nx = int(40*2)  # 120  # 120
+Ny = int(40*2)  # 30  # 60
+Nz = int(8*2)   # 30  # 10
 numg = Nx*Ny*Nz
 x_min, y_min, z_min = (0.0, 0.0, 0.0)
 (hx, hy, hz) = (Length / (Nx - 1), Height / (Ny - 1), Depth / (Nz - 1))
@@ -42,4 +42,9 @@ num_test_x = Nx
 num_test_y = Ny
 num_test_z = Nz
 # ------------------------------ filename output ----------------------------------------------------
-# filename_out = "./NeoHook3D_beam20x5_NeoHook_traction-1p25_20iter_100_25_5P_pen100000"
+filename_out = f"./{model_energy:s}_beam{int(Nx):d}x{int(Ny):d}x{int(Nz):d}_theta{int(theta):d}_phi{int(phi):d}_helth{helth_coefficient:.1f}_iter{iteration:d}" 
+
+# --------------------------------------------------ECHO---------------------------------------------
+print("#"*80)
+print(filename_out)
+print("#"*80)

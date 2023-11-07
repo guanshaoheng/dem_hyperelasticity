@@ -18,7 +18,7 @@ class EnergyModel:
             self.param_c = param_c
             self.param_d = 2 * (self.param_c1 + 2 * self.param_c2)
         elif self.type == 'degraded':
-            self.cons = DegradedCons(phi=cf.phi, theta=cf.theta)
+            self.cons = DegradedCons(phi=cf.phi, theta=cf.theta, failure=cf.helth_coefficient)
         else:
             raise RuntimeError
         self.I = torch.eye(3, device=dev, dtype=torch.float32).view(1, 3, 3).repeat(cf.numg, 1, 1)
@@ -149,8 +149,12 @@ class EnergyModel:
         # F[:, 2, 1] = duzdxyz[:, 1] + 0 # = Fzy 
         # F[:, 2, 2] = duzdxyz[:, 2] + 1 # = Fzz 
 
-        FF = cal_jacobian(inputs=x, outputs=u) + self.I
+        FF = self.cal_deformation_tensor(u, x)
 
-        strainEnergy = torch.stack([self.cons.total_energy(FF[i]) for i in range(cf.numg)])
+        # strainEnergy = torch.stack([self.cons.total_energy(FF[i]) for i in range(cf.numg)])
+        strainEnergy = self.cons.total_energy_batch(FF)
         
         return strainEnergy
+    
+    def cal_deformation_tensor(self, u, x):
+        return cal_jacobian(inputs=x, outputs=u) + self.I

@@ -1,6 +1,7 @@
 from import_file import *
 import scipy.integrate as sp
 
+
 # convert numpy BCs to torch
 def ConvBCsToTensors(bc_d):
     size_in_1 = len(bc_d)
@@ -21,18 +22,75 @@ def write_vtk(filename, x_space, y_space, z_space, Ux, Uy, Uz):
     displacement = (Ux, Uy, Uz)
     gridToVTK(filename, xx, yy, zz, pointData={"displacement": displacement})
 
+
 # --------------------------------------------------------------------------------
 # purpose: doing something in post processing for visualization in 3D
 # --------------------------------------------------------------------------------
-def write_vtk_v2(filename, x_space, y_space, z_space, U, S11, S12, S13, S22, S23, S33, E11, E12, E13, E22, E23, E33, SVonMises):
+def write_vtk_v2(
+    filename,
+    x_space,
+    y_space,
+    z_space,
+    U,
+    S11,
+    S12,
+    S13,
+    S22,
+    S23,
+    S33,
+    E11,
+    E12,
+    E13,
+    E22,
+    E23,
+    E33,
+    SVonMises,
+):
     xx, yy, zz = np.meshgrid(x_space, y_space, z_space)
-    gridToVTK(filename, xx, yy, zz, pointData={"displacement": U, "S-VonMises": SVonMises, \
-                                               "S11": S11, "S12": S12, "S13": S13, \
-                                               "S22": S22, "S23": S23, "S33": S33, \
-                                               "E11": E11, "E12": E12, "E13": E13, \
-                                               "E22": E22, "E23": E23, "E33": E33\
-                                               })
-    gridToVTK(filename+'_deformed', xx+U[0], yy+U[1], zz+U[2], pointData={"displacement": U})
+    gridToVTK(
+        filename + "_deformed",
+        xx + U[0],
+        yy + U[1],
+        zz + U[2],
+        pointData={
+            "displacement": U,
+            "S-VonMises": SVonMises,
+            "S11": S11,
+            "S12": S12,
+            "S13": S13,
+            "S22": S22,
+            "S23": S23,
+            "S33": S33,
+            "E11": E11,
+            "E12": E12,
+            "E13": E13,
+            "E22": E22,
+            "E23": E23,
+            "E33": E33,
+        },
+    )
+    gridToVTK(
+        filename,
+        xx,
+        yy,
+        zz,
+        pointData={
+            "displacement": U,
+            "S-VonMises": SVonMises,
+            "S11": S11,
+            "S12": S12,
+            "S13": S13,
+            "S22": S22,
+            "S23": S23,
+            "S33": S33,
+            "E11": E11,
+            "E12": E12,
+            "E13": E13,
+            "E22": E22,
+            "E23": E23,
+            "E33": E33,
+        },
+    )
 
 
 # --------------------------------------------------------------------------------
@@ -40,14 +98,15 @@ def write_vtk_v2(filename, x_space, y_space, z_space, U, S11, S12, S13, S22, S23
 # --------------------------------------------------------------------------------
 def write_arr2DVTK(filename, coordinates, values):
     # displacement = np.concatenate((values[:, 0:1], values[:, 1:2], values[:, 0:1]), axis=1)
-    x = np.array(coordinates[:, 0].flatten(), dtype='float32')
-    y = np.array(coordinates[:, 1].flatten(), dtype='float32')
-    z = np.zeros(x.shape, dtype='float32')
-    disX = np.array(values[:, 0].flatten(), dtype='float32')
-    disY = np.array(values[:, 1].flatten(), dtype='float32')
-    disZ = np.zeros(disX.shape, dtype='float32')
+    x = np.array(coordinates[:, 0].flatten(), dtype="float32")
+    y = np.array(coordinates[:, 1].flatten(), dtype="float32")
+    z = np.zeros(x.shape, dtype="float32")
+    disX = np.array(values[:, 0].flatten(), dtype="float32")
+    disY = np.array(values[:, 1].flatten(), dtype="float32")
+    disZ = np.zeros(disX.shape, dtype="float32")
     displacement = (disX, disY, disZ)
     gridToVTK(filename, x, y, z, pointData={"displacement": displacement})
+
 
 # --------------------------------------------------------------------------------
 # purpose: doing something in post processing for visualization in 3D
@@ -55,19 +114,19 @@ def write_arr2DVTK(filename, coordinates, values):
 def write_vtk_2d(filename, x_space, y_space, Ux, Uy):
     xx, yy = np.meshgrid(x_space, y_space)
     displacement = (Ux, Uy, Ux)
-    gridToVTK(filename, xx, yy, xx,  pointData={"displacement": displacement})
+    gridToVTK(filename, xx, yy, xx, pointData={"displacement": displacement})
 
 
 # --------------------------------------------------------------------------------
 # purpose: plotting loss convergence
 # --------------------------------------------------------------------------------
 def plot_loss_convergence(loss_array):
-    print('Loss convergence')
+    print("Loss convergence")
     range = np.arange(1, len(loss_array) + 1)
-    loss_plt, = plt.semilogx(range, loss_array, label='total loss')
+    (loss_plt,) = plt.semilogx(range, loss_array, label="total loss")
     plt.legend(handles=[loss_plt])
-    plt.xlabel('Iteration')
-    plt.ylabel('Loss value')
+    plt.xlabel("Iteration")
+    plt.ylabel("Loss value")
     plt.show()
 
 
@@ -81,8 +140,8 @@ def plot_deformed_displacement(surfaceUx, surfaceUy, defShapeX, defShapeY):
     axes[1].set_title("Displacement in y")
     fig.tight_layout()
     for tax in axes:
-        tax.set_xlabel('$x$')
-        tax.set_ylabel('$y$')
+        tax.set_xlabel("$x$")
+        tax.set_ylabel("$y$")
     plt.show()
 
 
@@ -105,7 +164,7 @@ def getL2norm(surUx, surUy, surUz, Nx, Ny, Nz, hx, hy, hz, dim=3):
     if dim == 2:
         uX1D = surUx.flatten()
         uY1D = surUy.flatten()
-        uXY= np.concatenate((np.array([uX1D]).T, np.array([uY1D]).T), axis=-1)
+        uXY = np.concatenate((np.array([uX1D]).T, np.array([uY1D]).T), axis=-1)
         N = Nx * Ny
         udotu = np.zeros(N)
         for i in range(N):
@@ -118,7 +177,9 @@ def getL2norm(surUx, surUy, surUz, Nx, Ny, Nz, hx, hy, hz, dim=3):
         uX1D = surUx.flatten()
         uY1D = surUy.flatten()
         uZ1D = surUz.flatten()
-        uXYZ = np.concatenate((np.array([uX1D]).T, np.array([uY1D]).T, np.array([uZ1D]).T), axis=-1)
+        uXYZ = np.concatenate(
+            (np.array([uX1D]).T, np.array([uY1D]).T, np.array([uZ1D]).T), axis=-1
+        )
         N = Nx * Ny * Nz
         udotu = np.zeros(N)
         for i in range(N):
@@ -129,39 +190,62 @@ def getL2norm(surUx, surUy, surUz, Nx, Ny, Nz, hx, hy, hz, dim=3):
         # L2norm = np.sqrt(sp.simps(sp.simps(sp.simps(udotuTensor, dx=hz), dx=hy), dx=hx))
     return L2norm
 
-def getH10norm(F11, F12, F13, F21, F22, F23, F31, F32, F33, Nx, Ny, Nz, hx, hy, hz, dim=3):
+
+def getH10norm(
+    F11, F12, F13, F21, F22, F23, F31, F32, F33, Nx, Ny, Nz, hx, hy, hz, dim=3
+):
     if dim == 2:
-        FinnerF = (F11-1)**2 + F12**2 + F21**2 + (F22-1)**2
+        FinnerF = (F11 - 1) ** 2 + F12**2 + F21**2 + (F22 - 1) ** 2
         FinnerFTensor = FinnerF.reshape(Nx, Ny)
         H10norm = np.sqrt(np.trapz(np.trapz(FinnerFTensor, dx=hy), dx=hx))
         # H10norm = np.sqrt(sp.simps(sp.simps(FinnerFTensor, dx=hy), dx=hx))
     else:
         # ||u||_H^1_0 = \sqrt(\int (Gradu : Gradu)) = Aij Bij
         # FinnerF = (F11-1)*(F11-1) + F12*F21 + F13*F31 + F21*F12 + (F22-1)*(F22-1) + F23*F32 + F31*F13 + F32*F23 + (F33-1)*(F33-1)  # WRONG
-        FinnerF = (F11 - 1) * (F11 - 1) + F12 * F12 + F13 * F13 + F21 * F21 + (F22 - 1) * (
-                    F22 - 1) + F23 * F23 + F31 * F31 + F32 * F32 + (F33 - 1) * (F33 - 1)
+        FinnerF = (
+            (F11 - 1) * (F11 - 1)
+            + F12 * F12
+            + F13 * F13
+            + F21 * F21
+            + (F22 - 1) * (F22 - 1)
+            + F23 * F23
+            + F31 * F31
+            + F32 * F32
+            + (F33 - 1) * (F33 - 1)
+        )
         FinnerFTensor = FinnerF.reshape(Nx, Ny, Nz)
-        H10norm = np.sqrt(np.trapz(np.trapz(np.trapz(FinnerFTensor, dx=hz), dx=hy), dx=hx))
+        H10norm = np.sqrt(
+            np.trapz(np.trapz(np.trapz(FinnerFTensor, dx=hz), dx=hy), dx=hx)
+        )
         # H10norm = np.sqrt(sp.simps(sp.simps(sp.simps(FinnerFTensor, dx=hz), dx=hy), dx=hx))
     return H10norm
 
+
 def getH10norm2D(F11, F12, F21, F22, Nx, Ny, hx, hy):
-    FinnerF = (F11 - 1) ** 2 + F12 ** 2 + F21 ** 2 + (F22 - 1) ** 2
+    FinnerF = (F11 - 1) ** 2 + F12**2 + F21**2 + (F22 - 1) ** 2
     FinnerFTensor = FinnerF.reshape(Nx, Ny)
     H10norm = np.sqrt(np.trapz(np.trapz(FinnerFTensor, dx=hy), dx=hx))
     # H10norm = np.sqrt(sp.simps(sp.simps(FinnerFTensor, dx=hy), dx=hx))
     return H10norm
 
+
 def cal_jacobian(inputs, outputs):
     """
-        inputs:  num_samples,  input_features
-        outputs: num_samples, output_features
+    inputs:  num_samples,  input_features
+    outputs: num_samples, output_features
 
-        return: nums_samples, out_features, in_features
+    return: nums_samples, out_features, in_features
     """
     return torch.stack(
-        [torch.autograd.grad(outputs[:, i].unsqueeze(1), inputs, grad_outputs=torch.ones(size=[len(outputs), 1]),
-                              retain_graph=True, create_graph=True)[0] 
-            for i in range(outputs.size(1))], dim=-1).permute(0, 2, 1)
-
-
+        [
+            torch.autograd.grad(
+                outputs[:, i].unsqueeze(1),
+                inputs,
+                grad_outputs=torch.ones(size=[len(outputs), 1]),
+                retain_graph=True,
+                create_graph=True,
+            )[0]
+            for i in range(outputs.size(1))
+        ],
+        dim=-1,
+    ).permute(0, 2, 1)
