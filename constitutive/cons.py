@@ -5,7 +5,8 @@ from constitutive.utils_cons import rotation_matrix
 
 class DegradedCons:
     def __init__(self, theta: float, phi: float, 
-                 K: float=60e3, mu: float=62.1e3, c1: float=56.59e3, c2:float=3.83, failure: float=1.0) -> None:
+                 K: float=60e3, mu: float=62.1e3, c1: float=56.59e3, c2:float=3.83, failure: float=1.0,
+                 num_pieces: int=5) -> None:
         """
             用于3D求解, 此处只将弹性纤维进行积分，没有考虑蛋白质纤维
             theta: 纤维的方向 rad 弧度 极角
@@ -15,6 +16,8 @@ class DegradedCons:
             mu: 剪切模量
             c1: 弹性纤维参数 
             c2: 弹性纤维参数
+
+            num_pieces: 进行积分时将0.5 pi分成num_pieces份
         """
 
         # 材料参数
@@ -37,7 +40,7 @@ class DegradedCons:
         # self.NxN = torch.ger(self.N, self.N)
 
         # 积分计算设置
-        self.num_pieces = 3  # 将90度切分为3份，在每份的形心处积分
+        self.num_pieces = num_pieces  # 将90度切分为3份，在每份的形心处积分
         num_integration_phi = 4
         self.num_integration_points = self.num_pieces**2*num_integration_phi
         self.dh = 0.5*torch.pi/self.num_pieces

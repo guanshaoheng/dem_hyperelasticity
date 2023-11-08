@@ -57,7 +57,7 @@ def main():
 
 if __name__ == "__main__":
     out_dir = "./output/dem"
-    fname = "degraded_beam20x20x4_theta0_phi0_helth1.0_iter100"
+    fname = "degraded_simpson_beam20x20x4_theta0_phi0_helth1.0_iter50"
     file_dir = os.path.join(out_dir, fname)
     tmp_dic = read_file(file_dir=file_dir)
     main()

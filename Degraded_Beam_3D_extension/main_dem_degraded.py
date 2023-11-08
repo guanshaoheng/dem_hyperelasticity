@@ -368,7 +368,7 @@ if __name__ == '__main__':
     #                   STEP 2: SETUP MODEL
     # ----------------------------------------------------------------------
     mat = md.EnergyModel(cf.model_energy, 3, cf.E, cf.nu)
-    dem = DeepEnergyMethod([cf.D_in, cf.H, cf.D_out], 'trapezoidal', mat, 3)
+    dem = DeepEnergyMethod([cf.D_in, cf.H, cf.D_out], cf.integration_method, mat, 3)
     # ----------------------------------------------------------------------
     #                   STEP 3: TRAINING MODEL
     # ----------------------------------------------------------------------
