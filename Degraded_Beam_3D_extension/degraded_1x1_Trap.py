@@ -96,11 +96,13 @@ class DeepEnergyMethod:
                 energy_loss = internal2 - torch.sum(external2)
                 # direchlit 边界条件 用来约束施加位移加载条件
                 boundary_loss = torch.sum(bc_u_crit)
-                loss = internal2 - torch.sum(external2) + boundary_loss
+                external_total = - torch.sum(external2)
+                loss = internal2 + external_total + boundary_loss
                 optimizer.zero_grad()
                 loss.backward()
-                line = 'Iter: %d Loss: %.9e Energy: %.9e Boundary: %.9e Time: %.3e mins' \
-                    % (t + 1, loss.item(), energy_loss.item(), boundary_loss.item(), (time.time() - it_time)/60.)
+                line = 'Iter: %d Loss: %.9e Internal: %.9e External: %.9e Boundary: %.9e Time: %.3e mins' \
+                    % (t + 1, loss.item(), internal2.item(), external_total.item(), 
+                       boundary_loss.item(), (time.time() - it_time)/60.)
                 print(line)
                 f_outstream.writelines(line + "\n")
                 energy_loss_array.append(energy_loss.data)
@@ -109,7 +111,7 @@ class DeepEnergyMethod:
                 return loss
             optimizer.step(closure)
         elapsed = time.time() - start_time
-        print('Training time: %.4f' % elapsed)
+        print('Training time(mins): %.4f' % (elapsed/60))
 
     def getU(self, x):
         u = self.model(x)

@@ -1,5 +1,5 @@
 # ------------------------------ network settings ---------------------------------------------------
-iteration = 50
+iteration = 100
 lr = 0.5
 D_in = 3
 H = 30
@@ -29,9 +29,9 @@ known_right_ty = 0
 known_right_tz = -500.
 bc_right_penalty = 1.0
 # ------------------------------ define domain and collocation points -------------------------------
-Nx = int(40*2)  # 120  # 120
-Ny = int(40*2)  # 30  # 60
-Nz = int(8*2)   # 30  # 10
+Nx = int(40/2)  # 120  # 120
+Ny = int(40/2)  # 30  # 60
+Nz = int(8/2)   # 30  # 10
 numg = Nx*Ny*Nz
 x_min, y_min, z_min = (0.0, 0.0, 0.0)
 (hx, hy, hz) = (Length / (Nx - 1), Height / (Ny - 1), Depth / (Nz - 1))
