@@ -1,6 +1,9 @@
 from dolfin import *
-import fenics as fe
+# import fenicsx as fe
 import time
+import config as cf
+import os
+import numpy as np
 
 start = time.time()
 # Optimization options for the form compiler
@@ -15,8 +18,8 @@ ffc_options = {"optimize": True, \
 # Create mesh and define function space
 # mesh = UnitCubeMesh(40, 20, 20)
 p0 = Point(0.0, 0.0, 0.0)
-p1 = Point(4.0, 1.0, 1.0)
-mesh = BoxMesh(p0, p1, 120, 30, 30)
+p1 = Point(cf.Length, cf.Height, cf.Depth)
+mesh = BoxMesh(p0, p1, cf.Nx, cf.Ny, cf.Nz)
 V = VectorFunctionSpace(mesh, "Lagrange", 1)
 # Sub domain for clamp at left end
 # def left(x, on_boundary):
@@ -40,8 +43,8 @@ left = CompiledSubDomain("near(x[0], side) && on_boundary", side=0.0, tol=10e-15
 # def right(x, on_boundary):
 #     return (x[0] - 20.0) < DOLFIN_EPS and on_boundary
 # Define Dirichlet boundary (x = 0 or x = 1)
-c = Expression(("0.0", "0.0", "0.0"), degree=2)
-t = Expression(("0.0", "-5.0", "0.0"), degree=2)
+c = Expression(("0.0", "0.0", "0.0"), degree=2)   # 位移边界条件
+t = Expression(("0.0", "0.0", "-5.0"), degree=2)  # 应力边界条件
 
 # bcl = DirichletBC(V, c, left)
 # bcr = DirichletBC(V, t, right)
@@ -49,7 +52,7 @@ t = Expression(("0.0", "-5.0", "0.0"), degree=2)
 # bcs = [bcl]
 
 # Define functions
-du = TrialFunction(V)            # Incremental displacement
+du = TrialFunction(V)           # Incremental displacement
 v = TestFunction(V)             # Test function
 u = Function(V)                 # Displacement from previous iteration
 # B  = Constant((0.0, -0.5, 0.0))  # Body force per unit volume
@@ -66,10 +69,10 @@ u = Function(V)                 # Displacement from previous iteration
 
 # neumann_domain = MeshFunction("size_t", mesh, 3)
 D = mesh.topology().dim()
-print(D)
+print(f"The dimention is {D:d}")
 neumann_domain = MeshFunction("size_t", mesh, D-1)
 neumann_domain.set_all(0)
-CompiledSubDomain("near(x[0], side) && on_boundary", side=4.0, tol=10e-15).mark(neumann_domain, 1)
+CompiledSubDomain("near(x[0], side) && on_boundary", side=cf.Length, tol=10e-15).mark(neumann_domain, 1)
 ds = Measure("ds", subdomain_data=neumann_domain)
 
 
@@ -89,7 +92,7 @@ E, nu = 10**3, 0.3
 mu, lmbda = Constant(E/(2*(1 + nu))), Constant(E*nu/((1 + nu)*(1 - 2*nu)))
 
 # Stored strain energy density (compressible neo-Hookean model)
-psi = (mu/2)*(Ic - 3) - mu*ln(J) + (lmbda/2)*(ln(J))**2
+psi = (mu/2)*(Ic - 3) - mu*ln(J) + (lmbda/2)*(ln(J))**2    # 定义材料本构
 
 # Total potential energy
 Pi = psi*dx - dot(t, u)*ds(1)
@@ -106,8 +109,8 @@ prm = solver.parameters
 # prm['newton_solver']['relative_tolerance'] = 1E-7
 # prm['newton_solver']['maximum_iterations'] = 25
 # prm['newton_solver']['relaxation_parameter'] = 1.0
-# prm['newton_solver']['linear_solver'] = 'gmres'
-prm['newton_solver']['linear_solver'] = 'petsc'
+prm['newton_solver']['linear_solver'] = 'gmres'
+# prm['newton_solver']['linear_solver'] = 'petsc'  # 使用的这个求解器
 # prm['newton_solver']['linear_solver'] = 'minres'
 # prm['newton_solver']['linear_solver'] = 'umfpack'
 # list_linear_solver_methods()
@@ -149,13 +152,28 @@ plot(von_Mises, title='Stress intensity')
 # Compute magnitude of displacement
 u_magnitude = sqrt(dot(u, u))
 u_magnitude = project(u_magnitude, V)
-plot(u_magnitude, 'Displacement magnitude')
+# plot(u_magnitude, 'Displacement magnitude')
 # print('min/max u:',
 #       u_magnitude.vector().array().min(),
 #       u_magnitude.vector().array().max())
 
 # Save solution to file in VTK format
-File('./output/fem/elasticity/displacement.pvd') << u
-File('./output/fem/elasticity/von_mises.pvd') << von_Mises
-File('./output/fem/elasticity/magnitude.pvd') << u_magnitude
-File('./output/fem/elasticity/Stress.pvd') << Stress
+file_dir = os.path.join("./output/fem", cf.filename_out)
+
+if not os.path.exists(file_dir):
+    os.mkdir(file_dir)
+
+# 原结构
+mesh_coordinates_origin = mesh.coordinates()
+
+# 更新结构到变形的结构
+# mesh.coordinates()[:, :D] += u.vector().get_local().reshape(-1, D)
+
+
+file_stream = File(os.path.join(file_dir, 'deformed_structure.pvd'))
+
+# file_stream << mesh
+File(os.path.join(file_dir, 'displacement.pvd')) << u
+File(os.path.join(file_dir, 'von_mises.pvd')) << von_Mises
+File(os.path.join(file_dir, 'magnitude.pvd')) << u_magnitude
+File(os.path.join(file_dir, 'Stress.pvd')) << Stress

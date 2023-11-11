@@ -78,8 +78,12 @@ class DeepEnergyMethod:
                 # ----------------------------------------------------------------------------------
                 u_pred = self.getU(x)
                 u_pred.double()
-                # 计算弹性势能密度
-                storedEnergy = self.energy.getStoredEnergy(u_pred, x)
+
+                # 不可压缩材料约束, 计算弹性势能密度
+                if cf.model_energy == "degraded":
+                    div_u, storedEnergy = self.energy.getStoredEnergy(u_pred, x)
+                else:
+                    storedEnergy = self.energy.getStoredEnergy(u_pred, x)
                 # 积分得到内部能量
                 internal2 = self.intLoss.lossInternalEnergy(storedEnergy, dx=dxdydz[0], dy=dxdydz[1], dz=dxdydz[2], shape=shape)
                 # 外力作工计算 通过力边界条件计算
@@ -98,11 +102,14 @@ class DeepEnergyMethod:
                 boundary_loss = torch.sum(bc_u_crit)
                 external_total = - torch.sum(external2)
                 loss = internal2 + external_total + boundary_loss
+                if cf.model_energy == "degraded":
+                    compression_penalty = self.intLoss.lossInternalEnergy(torch.abs(div_u)*cf.K_penalty, dx=dxdydz[0], dy=dxdydz[1], dz=dxdydz[2], shape=shape) 
+                    loss += compression_penalty
                 optimizer.zero_grad()
                 loss.backward()
-                line = 'Iter: %d Loss: %.9e Internal: %.9e External: %.9e Boundary: %.9e Time: %.3e mins' \
+                line = 'Iter: %d Loss: %.9e Internal: %.9e External: %.9e Boundary: %.9e Compression: %.9e Time: %.3e mins' \
                     % (t + 1, loss.item(), internal2.item(), external_total.item(), 
-                       boundary_loss.item(), (time.time() - it_time)/60.)
+                       boundary_loss.item(), compression_penalty.item(),  (time.time() - it_time)/60.)
                 print(line)
                 f_outstream.writelines(line + "\n")
                 energy_loss_array.append(energy_loss.data)

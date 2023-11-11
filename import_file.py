@@ -11,6 +11,7 @@ from pyevtk.hl import gridToVTK
 import numpy.matlib as ml
 from multiprocessing import Pool
 import torch.multiprocessing as mp
+import os
 
 dev = torch.device('cpu')
 if torch.cuda.is_available():

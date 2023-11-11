@@ -5,7 +5,7 @@ from constitutive.utils_cons import rotation_matrix
 
 class DegradedCons:
     def __init__(self, theta: float, phi: float, 
-                 K: float=60e3, mu: float=62.1e3, c1: float=56.59e3, c2:float=3.83, failure: float=1.0,
+                 K: float=8e5, mu: float=62.1e3, c1: float=56.59e3, c2:float=3.83, failure: float=1.0,
                  num_pieces: int=5) -> None:
         """
             用于3D求解, 此处只将弹性纤维进行积分，没有考虑蛋白质纤维
@@ -21,7 +21,7 @@ class DegradedCons:
         """
 
         # 材料参数
-        self.K = K   # 体积模量
+        self.K = K   # 体积模量 bulk modulus
         self.mu = mu # 剪切模量
         self.c1, self.c2 = c1, c2
         self.failure = failure  # 破坏参数，当failure为0则完全破坏，1为健康
@@ -64,8 +64,12 @@ class DegradedCons:
         C_ = torch.matmul(F_.T, F_)
         I1_ = torch.trace(C_)
 
+        energy1 = self.get_volumetric_engergy(J=J) 
+        energy2 = self.get_shear_energy(I1_=I1_) 
+        energy3 =  self.get_integrated_energy(C_=C_)
+
         return self.get_volumetric_engergy(J=J) + \
-                self.get_shear_energy(I1_=I1_) + self.get_integrated_energy_batch(C_=C_)
+                self.get_shear_energy(I1_=I1_) + self.get_integrated_energy(C_=C_)
                     #self.get_integrated_energy(C_=C_)
 
     def total_energy_batch(self, F: torch.Tensor):
@@ -193,7 +197,7 @@ class DegradedCons:
 
             返回值：能量密度, 应力张量
         """
-        # F.requires_grad = True  #没有必要加这句话，应为已经要求 grad 了
+        F.requires_grad = True  #没有必要加这句话，应为已经要求 grad 了
 
         # 变形张量和不变量
         J = torch.det(F)
@@ -204,25 +208,36 @@ class DegradedCons:
         # 体应变能量和剪应变能量
         vol_energy = self.get_volumetric_engergy(J=J)
         isochoric_energy = self.get_shear_energy(I1_=I1_) + self.get_integrated_energy(C_=C_)
+        total_energy  = vol_energy + isochoric_energy
 
-        # 平均应力
+        # # 平均应力
+        # """
+        #  参考A new constitutive framework for arterial wall mechanics and a comparative study of material models 公式 (8)
+        # """
+        # p = torch.autograd.grad(
+        #     vol_energy, J, grad_outputs=torch.ones_like(vol_energy), 
+        #     create_graph=True, retain_graph=True)[0]
+        # # 偏应力计算
+        # """
+        #     参考 A discrete approach for modeling degraded elastic fibers in aortic dissection 公式 (20~26)
+        # """
+        # denergy_dC_ = 2.*torch.autograd.grad(
+        #     isochoric_energy, C_, grad_outputs=torch.ones_like(isochoric_energy), 
+        #     create_graph=True, retain_graph=True)[0]
+        # sigma_ = torch.einsum("ij, jk, lk->il", F_, denergy_dC_, F_)/J
+        # sigma_dev = torch.einsum("ijkl, kl->ij", self.p, sigma_)
+        # sigma = p*self.kronecker + sigma_dev
+
         """
-         参考A new constitutive framework for arterial wall mechanics and a comparative study of material models 公式 (8)
+            柯西应力计算
         """
-        p = torch.autograd.grad(
-            vol_energy, J, grad_outputs=torch.ones_like(vol_energy), 
+        pk1 = torch.autograd.grad(
+            total_energy, F, grad_outputs=torch.ones_like(total_energy), 
             create_graph=True, retain_graph=True)[0]
-        # 偏应力计算
-        """
-            参考 A discrete approach for modeling degraded elastic fibers in aortic dissection 公式 (20~26)
-        """
-        denergy_dC_ = 2.*torch.autograd.grad(
-            isochoric_energy, C_, grad_outputs=torch.ones_like(isochoric_energy), 
-            create_graph=True, retain_graph=True)[0]
-        sigma_ = torch.einsum("ij, jk, lk->il", F_, denergy_dC_, F_)/J
-        sigma_dev = torch.einsum("ijkl, kl->ij", self.p, sigma_)
-        sigma = p*self.kronecker + sigma_dev
-        return vol_energy+isochoric_energy, sigma
+        sigma_pk1 = 1/J * torch.einsum("ij, kj->ik", pk1, F)
+
+
+        return total_energy, sigma
 
     def get_cauchy_stress_batch(self, F: torch.Tensor)->torch.Tensor:
         """
@@ -243,32 +258,28 @@ class DegradedCons:
         # 体应变能量和剪应变能量
         vol_energy = self.get_volumetric_engergy(J=J)
         isochoric_energy = self.get_shear_energy(I1_=I1_) + self.get_integrated_energy_batch(C_=C_)
+        total_energy  = vol_energy + isochoric_energy
+        r"""
+            柯西应力计算
+            PK第一应力计算  P = \frac{\partial \psi}{\partial F}
+            柯西应力       \sigma = \frac{1}{J} P F^T
 
-        # 平均应力
+            参考： https://zhuanlan.zhihu.com/p/270596659
         """
-         参考A new constitutive framework for arterial wall mechanics and a comparative study of material models 公式 (8)
-        """
-        p = torch.autograd.grad(
-            vol_energy, J, grad_outputs=torch.ones_like(vol_energy), 
+        pk1 = torch.autograd.grad(
+            total_energy, F, grad_outputs=torch.ones_like(total_energy), 
             create_graph=True, retain_graph=True)[0]
-        # 偏应力计算
-        """
-            参考 A discrete approach for modeling degraded elastic fibers in aortic dissection 公式 (20~26)
-        """
-        denergy_dC_ = 2.*torch.autograd.grad(
-            isochoric_energy, C_, grad_outputs=torch.ones_like(isochoric_energy), 
-            create_graph=True, retain_graph=True)[0]
-        sigma_ = torch.einsum("nij, njk, nlk, n->nil", F_, denergy_dC_, F_, 1./J)
-        sigma_dev = torch.einsum("ijkl, nkl->nij", self.p, sigma_)
-        sigma = torch.einsum("n, ij->nij", p, self.kronecker) + sigma_dev
+        sigma =  torch.einsum("n, nij, nkj->nik", 1./J, pk1, F)
+       
         return vol_energy+isochoric_energy, sigma
     
 
 if __name__ == "__main__":
     obj = DegradedCons(theta=np.pi*0.3, phi=np.pi*0.23, failure=1.0)
     F = torch.diag(torch.tensor([0.95, 0.95, 1.2], dtype=torch.float32))
+    F.requires_grad = True
     energy = obj.total_energy(F = F)
-    energyy, sigma = obj.get_cauchy_stress(F = F)
+    energyy, sigma = obj.get_cauchy_stress_batch(F = F.reshape(1, 3, 3))
     print()
 
 

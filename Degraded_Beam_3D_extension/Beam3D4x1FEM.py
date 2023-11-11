@@ -6,7 +6,7 @@ start = time.time()
 # Optimization options for the form compiler
 parameters["form_compiler"]["cpp_optimize"] = True
 # parameters["form_compiler"]["representation"] = "quadrature"  # change quadrature to uflacs if there's problem
-# parameters["form_compiler"]["quadrature_degree"] = 1
+parameters["form_compiler"]["quadrature_degree"] = 2
 ffc_options = {"optimize": True, \
                "eliminate_zeros": True, \
                "precompute_basis_const": True, \
@@ -14,12 +14,10 @@ ffc_options = {"optimize": True, \
 
 # Create mesh and define function space
 # mesh = UnitCubeMesh(40, 20, 20)
-# p0 = Point(0.0, 0.0, 0.0)
-# p1 = Point(20.0, 5.0, 1.0)
-# mesh = BoxMesh(p0, p1, 100, 25, 5)
-mesh = RectangleMesh(Point(0.0, 0.0), Point(4.0, 1.0), 200, 50, "crossed")
-# mesh = UnitSquareMesh.create(10, 10, CellType.Type.quadrilateral)
-V = VectorFunctionSpace(mesh, "Lagrange", 2)
+p0 = Point(0.0, 0.0, 0.0)
+p1 = Point(4.0, 1.0, 1.0)
+mesh = BoxMesh(p0, p1, 40, 10, 10)
+V = VectorFunctionSpace(mesh, "Lagrange", 1)
 # Sub domain for clamp at left end
 # def left(x, on_boundary):
 #     return x[0] < 10e-14 and on_boundary
@@ -42,8 +40,8 @@ left = CompiledSubDomain("near(x[0], side) && on_boundary", side=0.0, tol=10e-15
 # def right(x, on_boundary):
 #     return (x[0] - 20.0) < DOLFIN_EPS and on_boundary
 # Define Dirichlet boundary (x = 0 or x = 1)
-c = Expression(("0.0", "0.0"), degree=2)
-t = Expression(("0.0", "-10.0"), degree=2)
+c = Expression(("0.0", "0.0", "0.0"), degree=2)
+t = Expression(("0.0", "-5.0", "0.0"), degree=2)
 
 # bcl = DirichletBC(V, c, left)
 # bcr = DirichletBC(V, t, right)
@@ -87,26 +85,11 @@ Ic = tr(C)
 J = det(F)
 
 # Elasticity parameters
-J = sqrt(det(C))
-I1 = tr(C)
-I2 = 0.5 * (I1**2 - tr(C*C))
-c1 = Constant(630)
-c2 = Constant(-1.2)
-c = Constant(100)
-d = 2 * (c1 + 2 * c2)
-# Elasticity parameters
-# E, nu = 10**3, 0.3
-# mu, lmbda = Constant(E/(2*(1 + nu))), Constant(E*nu/((1 + nu)*(1 - 2*nu)))
+E, nu = 10**3, 0.3
+mu, lmbda = Constant(E/(2*(1 + nu))), Constant(E*nu/((1 + nu)*(1 - 2*nu)))
 
 # Stored strain energy density (compressible neo-Hookean model)
-# psi = (mu/2)*(Ic - 3) - mu*ln(J) + (lmbda/2)*(ln(J))**2
-psi = c*(J-1)**2 - d*ln(J) + c1*(I1-2) + c2*(I2-1)
-
-# E, nu = 10**3, 0.3
-# mu, lmbda = Constant(E/(2*(1 + nu))), Constant(E*nu/((1 + nu)*(1 - 2*nu)))
-
-# Stored strain energy density (compressible neo-Hookean model)
-# psi = (mu/2)*(Ic - 3) - mu*ln(J) + (lmbda/2)*(ln(J))**2
+psi = (mu/2)*(Ic - 3) - mu*ln(J) + (lmbda/2)*(ln(J))**2
 
 # Total potential energy
 Pi = psi*dx - dot(t, u)*ds(1)
@@ -125,6 +108,7 @@ prm = solver.parameters
 # prm['newton_solver']['relaxation_parameter'] = 1.0
 # prm['newton_solver']['linear_solver'] = 'gmres'
 prm['newton_solver']['linear_solver'] = 'petsc'
+# prm['newton_solver']['linear_solver'] = 'minres'
 # prm['newton_solver']['linear_solver'] = 'umfpack'
 # list_linear_solver_methods()
 solver.solve()
@@ -132,8 +116,8 @@ solver.solve()
 # solve(F == 0, u, bcs, J=J, form_compiler_parameters=ffc_options)
 # solve(F == 0, u, bcs, J=J, solver_parameters={"linear_solver":"lu"})
 # Save solution in VTK format
-file = File("./output/fem/mooneyrivlin/beam2d_4x1_fem_v1.pvd");
-file << u;
+# file = File("./output/fem/beam3d_4x1_fem_quad.pvd");
+# file << u;
 
 L2 = inner(u, u) * dx
 H10 = inner(grad(u), grad(u)) * dx
@@ -149,21 +133,17 @@ print("H1 norm = %.10f" % norm(u, norm_type="H1"))
 print("H10 norm = %.10f" % norm(u, norm_type="H10"))
 print("Running time = %.3f" % float(time.time()-start))
 
-
 # Plot solution
 plot(u, title='Displacement', mode='displacement')
 F = I + grad(u)
-C = F.T * F
-J = sqrt(det(C))
-I1 = tr(C)
-I2 = 0.5 * (I1**2 - tr(C*C))
-secondPiola = (2*c1 + 2*c2*I1)*I - 2*c2*C.T + (2*c*(J-1)*J - d)*inv(C.T)
+P = mu * F + (lmbda * ln(det(F)) - mu) * inv(F).T
+secondPiola = inv(F) * P
 Sdev = secondPiola - (1./3)*tr(secondPiola)*I # deviatoric stress
 von_Mises = sqrt(3./2*inner(Sdev, Sdev))
-V = FunctionSpace(mesh, "Lagrange", 2)
-W = TensorFunctionSpace(mesh, "Lagrange", 2)
+V = FunctionSpace(mesh, "Lagrange", 1)
+W = TensorFunctionSpace(mesh, "Lagrange", 1)
 von_Mises = project(von_Mises, V)
-Stress = project(secondPiola, W)
+Stress = project(secondPiola, W, solver_type='petsc')
 plot(von_Mises, title='Stress intensity')
 
 # Compute magnitude of displacement
@@ -175,8 +155,7 @@ plot(u_magnitude, 'Displacement magnitude')
 #       u_magnitude.vector().array().max())
 
 # Save solution to file in VTK format
-File('./output/fem/elasticity/mooneyrivlin/displacement.pvd') << u
-File('./output/fem/elasticity/mooneyrivlin/von_mises.pvd') << von_Mises
-File('./output/fem/elasticity/mooneyrivlin/magnitude.pvd') << u_magnitude
-File('./output/fem/elasticity/mooneyrivlin/stress.pvd') << Stress
-# interactive()
+File('./output/fem/elasticity/displacement.pvd') << u
+File('./output/fem/elasticity/von_mises.pvd') << von_Mises
+File('./output/fem/elasticity/magnitude.pvd') << u_magnitude
+File('./output/fem/elasticity/Stress.pvd') << Stress

@@ -149,12 +149,17 @@ class EnergyModel:
         # F[:, 2, 1] = duzdxyz[:, 1] + 0 # = Fzy 
         # F[:, 2, 2] = duzdxyz[:, 2] + 1 # = Fzz 
 
-        FF = self.cal_deformation_tensor(u, x)
+        dudx = cal_jacobian(inputs=x, outputs=u)
+
+        div_u = torch.einsum("nii->n", dudx)
 
         # strainEnergy = torch.stack([self.cons.total_energy(FF[i]) for i in range(cf.numg)])
-        strainEnergy = self.cons.total_energy_batch(FF)
+        strainEnergy = self.cons.total_energy_batch(dudx + self.I)
         
-        return strainEnergy
+        return div_u, strainEnergy
+    
+    # def divergence3D(self, u, x):
+
     
     def cal_deformation_tensor(self, u, x):
         return cal_jacobian(inputs=x, outputs=u) + self.I
