@@ -35,7 +35,12 @@ def main():
     # 绘制曲线
     for key in tmp_dic:
         if key != "epoch":
-            plt.plot(tmp_dic["epoch"], tmp_dic[key], label=key)
+            if key == "Internal":
+                plt.semilogy(tmp_dic["epoch"], tmp_dic[key], label=key, linestyle="--")
+            elif key == "Boundary":
+                continue
+            else:
+                plt.semilogy(tmp_dic["epoch"], tmp_dic[key], label=key)
 
     # 添加图例
     plt.legend()
@@ -57,7 +62,7 @@ def main():
 
 if __name__ == "__main__":
     out_dir = "./output/dem"
-    fname = "degraded_simpson_beam20x20x4_theta0_phi0_helth1.0_iter50"
+    fname = "degraded_simpson_beam20x20x4_theta0_phi0_helth0.0_K8e+09_iter50"
     file_dir = os.path.join(out_dir, fname)
     tmp_dic = read_file(file_dir=file_dir)
     main()

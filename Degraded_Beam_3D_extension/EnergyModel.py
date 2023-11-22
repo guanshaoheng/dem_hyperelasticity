@@ -18,7 +18,9 @@ class EnergyModel:
             self.param_c = param_c
             self.param_d = 2 * (self.param_c1 + 2 * self.param_c2)
         elif self.type == 'degraded':
-            self.cons = DegradedCons(phi=cf.phi, theta=cf.theta, failure=cf.helth_coefficient)
+            self.cons = DegradedCons(
+                K=cf.K_penalty, mu=cf.mu, c1=cf.c1, c2=cf.c2,
+                phi=cf.phi, theta=cf.theta, failure=cf.helth_coefficient)
         else:
             raise RuntimeError
         self.I = torch.eye(3, device=dev, dtype=torch.float32).view(1, 3, 3).repeat(cf.numg, 1, 1)
@@ -135,20 +137,6 @@ class EnergyModel:
     # Shaoheng Guan shaohengguan@gmail.com
     # ---------------------------------------------------------------------------------------
     def degraded3D(self, u, x):
-        # F = torch.zeros(size=[len(u), 3, 3])
-        # duxdxyz = torch.autograd.grad(u[:, 0].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
-        # duydxyz = torch.autograd.grad(u[:, 1].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
-        # duzdxyz = torch.autograd.grad(u[:, 2].unsqueeze(1), x, torch.ones(x.size()[0], 1, device=dev), create_graph=True, retain_graph=True)[0]
-        # F[:, 0, 0] = duxdxyz[:, 0] + 1 # = Fxx 
-        # F[:, 0, 1] = duxdxyz[:, 1] + 0 # = Fxy 
-        # F[:, 0, 2] = duxdxyz[:, 2] + 0 # = Fxz 
-        # F[:, 1, 0] = duydxyz[:, 0] + 0 # = Fyx 
-        # F[:, 1, 1] = duydxyz[:, 1] + 1 # = Fyy 
-        # F[:, 1, 2] = duydxyz[:, 2] + 0 # = Fyz 
-        # F[:, 2, 0] = duzdxyz[:, 0] + 0 # = Fzx 
-        # F[:, 2, 1] = duzdxyz[:, 1] + 0 # = Fzy 
-        # F[:, 2, 2] = duzdxyz[:, 2] + 1 # = Fzz 
-
         dudx = cal_jacobian(inputs=x, outputs=u)
 
         div_u = torch.einsum("nii->n", dudx)
@@ -157,9 +145,6 @@ class EnergyModel:
         strainEnergy = self.cons.total_energy_batch(dudx + self.I)
         
         return div_u, strainEnergy
-    
-    # def divergence3D(self, u, x):
-
     
     def cal_deformation_tensor(self, u, x):
         return cal_jacobian(inputs=x, outputs=u) + self.I

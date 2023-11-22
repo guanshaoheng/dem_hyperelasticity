@@ -27,68 +27,19 @@ def write_vtk(filename, x_space, y_space, z_space, Ux, Uy, Uz):
 # purpose: doing something in post processing for visualization in 3D
 # --------------------------------------------------------------------------------
 def write_vtk_v2(
-    filename,
-    x_space,
-    y_space,
-    z_space,
-    U,
-    S11,
-    S12,
-    S13,
-    S22,
-    S23,
-    S33,
-    E11,
-    E12,
-    E13,
-    E22,
-    E23,
-    E33,
-    SVonMises,
-):
+    filename, x_space, y_space, z_space, U, S11, S12, S13, S22, S23, S33, E11, E12, E13, E22, E23, E33, SVonMises, ):
     xx, yy, zz = np.meshgrid(x_space, y_space, z_space)
-    gridToVTK(
-        filename + "_deformed",
-        xx + U[0],
-        yy + U[1],
-        zz + U[2],
+    gridToVTK(filename + "_deformed", xx + U[0], yy + U[1], zz + U[2],
         pointData={
-            "displacement": U,
-            "S-VonMises": SVonMises,
-            "S11": S11,
-            "S12": S12,
-            "S13": S13,
-            "S22": S22,
-            "S23": S23,
-            "S33": S33,
-            "E11": E11,
-            "E12": E12,
-            "E13": E13,
-            "E22": E22,
-            "E23": E23,
-            "E33": E33,
-        },
-    )
+            "displacement": U, "S-VonMises": SVonMises, 
+            "S11": S11, "S12": S12, "S13": S13, "S22": S22, "S23": S23, "S33": S33, "E11": E11, "E12": E12, "E13": E13, "E22": E22, "E23": E23, "E33": E33,
+            "volumetric_strain": E11+E22+E33})
     gridToVTK(
         filename,
-        xx,
-        yy,
-        zz,
+        xx, yy, zz,
         pointData={
-            "displacement": U,
-            "S-VonMises": SVonMises,
-            "S11": S11,
-            "S12": S12,
-            "S13": S13,
-            "S22": S22,
-            "S23": S23,
-            "S33": S33,
-            "E11": E11,
-            "E12": E12,
-            "E13": E13,
-            "E22": E22,
-            "E23": E23,
-            "E33": E33,
+            "displacement": U, "S-VonMises": SVonMises, 
+            "S11": S11, "S12": S12, "S13": S13, "S22": S22, "S23": S23, "S33": S33, "E11": E11, "E12": E12, "E13": E13, "E22": E22, "E23": E23, "E33": E33,
         },
     )
 

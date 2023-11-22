@@ -39,7 +39,7 @@ class DeepEnergyMethod:
         x.requires_grad_(True)
         # get tensor inputs and outputs for boundary conditions
         # -------------------------------------------------------------------------------
-        #                             Dirichlet BC
+        #                             Dirichlet BC 将边界条件相关的值转化成torch张量
         # -------------------------------------------------------------------------------
         dirBC_coordinates = {}  # declare a dictionary
         dirBC_values = {}  # declare a dictionary
@@ -49,14 +49,14 @@ class DeepEnergyMethod:
             dirBC_values[i] = torch.from_numpy(dirichletBC[keyi]['known_value']).float().to(dev)
             dirBC_penalty[i] = torch.tensor(dirichletBC[keyi]['penalty']).float().to(dev)
         # -------------------------------------------------------------------------------
-        #                           Neumann BC
+        #                           Neumann BC 将边界条件相关的值转化成torch张量
         # -------------------------------------------------------------------------------
         neuBC_coordinates = {}  # declare a dictionary
         neuBC_values = {}  # declare a dictionary
         neuBC_penalty = {}
         for i, keyi in enumerate(neumannBC):
             neuBC_coordinates[i] = torch.from_numpy(neumannBC[keyi]['coord']).float().to(dev)
-            neuBC_coordinates[i].requires_grad_(True)
+            neuBC_coordinates[i].requires_grad_(True)  # 允许对力边界的坐标值求导
             neuBC_values[i] = torch.from_numpy(neumannBC[keyi]['known_value']).float().to(dev)
             neuBC_penalty[i] = torch.tensor(neumannBC[keyi]['penalty']).float().to(dev)
         # ----------------------------------------------------------------------------------
@@ -89,7 +89,7 @@ class DeepEnergyMethod:
                 # 外力作工计算 通过力边界条件计算
                 external2 = torch.zeros(len(neuBC_coordinates))
                 for i, vali in enumerate(neuBC_coordinates): # 遍历力边界条件
-                    neu_u_pred = self.getU(neuBC_coordinates[i])
+                    neu_u_pred = self.getU(neuBC_coordinates[i])  # 力边界上的点的位移
                     fext = torch.bmm((neu_u_pred + neuBC_coordinates[i]).unsqueeze(1), neuBC_values[i].unsqueeze(2))
                     external2[i] = self.intLoss.lossExternalEnergy(fext, dx=dxdydz[1], dy=dxdydz[2], shape=[shape[1], shape[2]])
                 bc_u_crit = torch.zeros((len(dirBC_coordinates)))
@@ -104,7 +104,7 @@ class DeepEnergyMethod:
                 loss = internal2 + external_total + boundary_loss
                 if cf.model_energy == "degraded":
                     compression_penalty = self.intLoss.lossInternalEnergy(torch.abs(div_u)*cf.K_penalty, dx=dxdydz[0], dy=dxdydz[1], dz=dxdydz[2], shape=shape) 
-                    loss += compression_penalty
+                    # loss += compression_penalty
                 optimizer.zero_grad()
                 loss.backward()
                 line = 'Iter: %d Loss: %.9e Internal: %.9e External: %.9e Boundary: %.9e Compression: %.9e Time: %.3e mins' \
@@ -374,7 +374,7 @@ if __name__ == '__main__':
     # ----------------------------------------------------------------------
     #                   STEP 2: SETUP MODEL
     # ----------------------------------------------------------------------
-    mat = md.EnergyModel(cf.model_energy, 3, cf.E, cf.nu)
+    mat = md.EnergyModel(cf.model_energy, 3)
     dem = DeepEnergyMethod([cf.D_in, cf.H, cf.D_out], cf.integration_method, mat, 3)
     # ----------------------------------------------------------------------
     #                   STEP 3: TRAINING MODEL
@@ -384,6 +384,7 @@ if __name__ == '__main__':
     if not os.path.exists(filename_out):
         os.mkdir(filename_out)
     f_outstream = open(os.path.join(filename_out, "training_history.txt"), 'w')
+
     dem.train_model(cf.shape, cf.dxdydz, dom, boundary_neumann, boundary_dirichlet, cf.iteration, cf.lr)
     end_time = (time.time() - start_time)/60.
     

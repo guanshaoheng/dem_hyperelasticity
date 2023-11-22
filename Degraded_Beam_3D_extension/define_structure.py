@@ -20,18 +20,18 @@ def setup_domain(plot_flag = False):
             dom[tb:te, 0] = x
             dom[tb:te, 1] = lin_y
             dom[tb:te, 2] = z
-    print(dom.shape)
+    # print(dom.shape)
     np.meshgrid(lin_x, lin_y, lin_z)
 
     # ------------------------------------ BOUNDARY ----------------------------------------
     # Left boundary condition (Dirichlet BC)
-    bcl_u_pts_idx = np.where(dom[:, 0] == x_min)
-    bcl_u_pts = dom[bcl_u_pts_idx, :][0]
+    bcl_u_pts_idx = np.where(dom[:, 0] == x_min)[0]  # 选中最左侧点的编号
+    bcl_u_pts = dom[bcl_u_pts_idx, :]                # 最左侧点
     bcl_u = np.ones(np.shape(bcl_u_pts)) * [known_left_ux, known_left_uy, known_left_uz]
 
     # Right boundary condition (Neumann BC)
-    bcr_t_pts_idx = np.where(dom[:, 0] == Length)
-    bcr_t_pts = dom[bcr_t_pts_idx, :][0]
+    bcr_t_pts_idx = np.where(dom[:, 0] == Length)[0]
+    bcr_t_pts = dom[bcr_t_pts_idx, :]
     bcr_t = np.ones(np.shape(bcr_t_pts)) * [known_right_tx, known_right_ty, known_right_tz]
 
     # ------------------------------------   PLOT   ----------------------------------------

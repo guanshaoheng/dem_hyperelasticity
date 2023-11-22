@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 import matplotlib as mpl
 import time
 from mpl_toolkits.mplot3d import Axes3D
-from pyevtk.hl import gridToVTK
+from pyevtk.hl import gridToVTK, pointsToVTK
 import numpy.matlib as ml
 from multiprocessing import Pool
 import torch.multiprocessing as mp

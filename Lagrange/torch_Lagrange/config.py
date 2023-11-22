@@ -1,49 +1,84 @@
+import numpy as np
+import os
+
 # ------------------------------ network settings ---------------------------------------------------
-iteration = 50
+iteration = int(1e6)
 lr = 0.5
 D_in = 3
 H = 30
 D_out = 3
+save_per_epoch = 1e3
+internal_tolerance = 0.001
+patience_num = 5
 # ------------------------------ material parameter -------------------------------------------------
-K_penalty = 8e10
-mu = 62.1e3
-c1 = 56.59e3
-c2 = 3.83
-model_energy = 'degraded' # neohookean  degraded
+
+E = 1e6
+nu = 0.2
+lameLa = E*nu / ((1+nu)*(1-2*nu))
+lameMu = E / (2*(1+nu))
+dh = 16.7e-5*2.
+m = 1.0
+g= 9.8
+
 # 肌肉纤维方向 
 theta = 0.
 phi = 0.
 helth_coefficient = 0.  # 1.0 表示完全健康，0.0表示完全损坏
 integration_method = "simpson"  # simpson trapezoidal 积分计算方法 
 # ----------------------------- define structural parameters ---------------------------------------
-Length = 1.0
-Height = 1.0
-Depth = 0.2
+lx = Length = 1.0
+ly = Height = 1.0
+lz = Depth = 0.2
+init_x, init_y = 0.1, 0.6
+
 known_left_ux = 0
 known_left_uy = 0
 known_left_uz = 0
 bc_left_penalty = 1.0
 
-known_right_tx = 5000.
+known_right_ux = -0.1
+known_right_uy = 0.05
+known_right_uz = 0.
+
+known_right_tx = 0.
 known_right_ty = 0.
 known_right_tz = 0.
 bc_right_penalty = 1.0
+
+# 将位移在1000个荷载步上逐渐施加上去
+load_step_len = 1000
+
 # ------------------------------ define domain and collocation points -------------------------------
-Nx = int(40/2)  # 120  # 120
-Ny = int(40/2)  # 30  # 60
-Nz = int(8/2)   # 30  # 10
-numg = Nx*Ny*Nz
+nx = Nx = int(50)  # 120  # 120
+ny = Ny = int(10)  # 30  # 60
+nz = Nz = int(1)   # 30  # 10
+dim = 2
+n_node = Nx*Ny*Nz
 x_min, y_min, z_min = (0.0, 0.0, 0.0)
-(hx, hy, hz) = (Length / (Nx - 1), Height / (Ny - 1), Depth / (Nz - 1))
+dx = dy = dz = 1/32
 shape = [Nx, Ny, Nz]
-dxdydz = [hx, hy, hz]
+dxdydz = [dx, dy, dz]
+n_triangles = (nx-1) * (ny-1)*2
+
+xx, yy, zz = np.meshgrid(
+    np.linspace(init_x, init_x + dx * (nx - 1), nx), 
+    np.linspace(init_y, init_y + dx * (ny - 1), ny),
+    np.linspace(0, 1e-6, 2)
+    )
 # ------------------------------ data testing -------------------------------------------------------
-num_test_x = Nx
-num_test_y = Ny
-num_test_z = Nz
+nx_test = int(10)
+ny_test = int(10)
+nz_test = int(20)
+hx_test = lx/(nx_test-1)
+hy_test = ly/(ny_test-1)
+hz_test = lz/(nz_test-1)
+
 # ------------------------------ filename output ----------------------------------------------------
-filename_out = f"./{model_energy:s}_{integration_method:s}_beam{int(Nx):d}x{int(Ny):d}x{int(Nz):d}_" + \
-    f"theta{int(theta):d}_phi{int(phi):d}_helth{helth_coefficient:.1f}_K{K_penalty:.0e}_mu{mu:.0e}_iter{iteration:d}" 
+filename_out = f"./beam{int(Nx):d}x{int(Ny):d}x{int(Nz):d}_" + \
+    f"E{E:.0e}_nu{nu:.0e}" 
+
+if not os.path.exists(filename_out):
+    os.mkdir(filename_out)
 
 # --------------------------------------------------ECHO---------------------------------------------
 print("#"*80)

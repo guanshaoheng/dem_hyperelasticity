@@ -5,7 +5,7 @@ from constitutive.utils_cons import rotation_matrix
 
 class DegradedCons:
     def __init__(self, theta: float, phi: float, 
-                 K: float=8e5, mu: float=62.1e3, c1: float=56.59e3, c2:float=3.83, failure: float=1.0,
+                 K: float=8e9, mu: float=62.1e3, c1: float=56.59e3, c2:float=3.83, failure: float=1.0,
                  num_pieces: int=5) -> None:
         """
             用于3D求解, 此处只将弹性纤维进行积分，没有考虑蛋白质纤维
@@ -63,10 +63,6 @@ class DegradedCons:
         F_ = J ** (-1/3) * F
         C_ = torch.matmul(F_.T, F_)
         I1_ = torch.trace(C_)
-
-        energy1 = self.get_volumetric_engergy(J=J) 
-        energy2 = self.get_shear_energy(I1_=I1_) 
-        energy3 =  self.get_integrated_energy(C_=C_)
 
         return self.get_volumetric_engergy(J=J) + \
                 self.get_shear_energy(I1_=I1_) + self.get_integrated_energy(C_=C_)
