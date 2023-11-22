@@ -1,5 +1,5 @@
-from dem_hyperelasticity.config import *
-from dem_hyperelasticity.TStructure.config import *
+from config import *
+import matplotlib.pyplot as plt 
 
 
 def setup_domain():
