@@ -15,6 +15,8 @@ def read_gmsh3d(fname = "./mesh_files/T_shape_structure.msh"):
     mesh_new = meshio.Mesh(points= points, cells={"tetra": tetra[0]})
 
     mesh_new.write(f"./mesh_files/Original shape.vtk")
+
+    print(f"\n\nNum_elements: {len(points):d} Num_tetra: {len(tetra):d}\n\n")
     
     return points, tetra[0]
 
