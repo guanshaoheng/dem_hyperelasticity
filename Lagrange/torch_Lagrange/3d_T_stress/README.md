@@ -1,4 +1,4 @@
-# T形结构在位移荷载下的变形
+# T形结构在应力荷载下的变形
 
 ![](./mesh_files/T_shape_msh.png)
 
@@ -9,6 +9,5 @@
 - 泊松比 $\nu = 0.2$
 
 ## 计算结果
-![](./mesh_files/T_3d_torque_sig_mises.png)
-
+![](./mesh_files/T_shape_3d_sig_mises.png)
 

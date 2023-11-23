@@ -58,12 +58,12 @@ class Torch_Lagrange:
     def boundary_index_left_func(self,):
 
         index = torch.arange(self.n_node)[
-            torch.isclose(torch.zeros(1), self.x[:, 2]) * (self.x[:, 0] < -5)]
+            torch.isclose(torch.min(self.x[:, 0]), self.x[:, 0])]
         return index
     
     def boundary_index_right_func(self,):
         index = torch.arange(self.n_node)[
-            torch.isclose(torch.ones(1)*5, self.x[:, 2]) * (self.x[:, 0] > 5)]
+            torch.isclose(torch.max(self.x[:, 0]), self.x[:, 0])]
         return index
     
     def boundary_index_bottom_func(self, ):
@@ -138,11 +138,10 @@ class Torch_Lagrange:
             energy_density = self.cal_energy(F=F)
 
             # 计算外力做功
-            # External = torch.einsum(
-            #     "nj, j->", 
-            #     x_clone[self.boundary_index_top] - self.x_origin[self.boundary_index_top], 
-            #     torch.tensor([cf.known_top_tx, cf.known_top_ty, cf.known_top_tz]))
-            External = 0.
+            External = torch.einsum(
+                "nj, j->", 
+                x_clone[self.boundary_index_top] - self.x_origin[self.boundary_index_top], 
+                torch.tensor([cf.known_top_tx, cf.known_top_ty, cf.known_top_tz]))
 
             Internal = torch.sum(energy_density)
             # self.optimizer.zero_grad()
@@ -153,17 +152,15 @@ class Torch_Lagrange:
             self.v += self.acc * 0.5* self.dh if t ==0 else self.acc * self.dh
 
             # 位移边界条件，将对应节点速度设置为0
-            self.v[self.boundary_index_left, 2] *= 0.
-            self.v[self.boundary_index_right, 2] *= 0.
+            # self.v[self.boundary_index_left, :] *= 0.
+            # self.v[self.boundary_index_right, 0] *= 0.
             self.v[self.boundary_index_bottom, :] *= 0.
             # 更新节点
             self.x += self.dh * self.v
             # 位移边界条件
-            factor = min(t, cf.load_step_len)/cf.load_step_len
-            self.x[self.boundary_index_left, 2] = self.x_origin[self.boundary_index_left, 2] +  \
-                 factor * cf.known_left_uz * torch.abs(self.x_origin[self.boundary_index_left, 0]) / 9.
-            self.x[self.boundary_index_right, 2] = self.x_origin[self.boundary_index_right, 2] +  \
-                 factor * cf.known_right_uz * torch.abs(self.x_origin[self.boundary_index_right, 0]) / 9.
+            # factor = min(t, cf.load_step_len)/cf.load_step_len
+            # self.x[self.boundary_index_right, 0] = self.x_origin[self.boundary_index_right, 0] +  \
+            #      factor * cf.known_right_ux
 
             # damping
             self.v *= np.exp(-self.dh * 50.)
@@ -185,7 +182,7 @@ class Torch_Lagrange:
                     try_num = 0
                         
                 line = 'Iter: %d Loss: %.9e Internal: %.9e External: %.9e Improvement: %.3e Time: %.3e(s) ' \
-                        % (t+1 if t>0 else t, loss.item(), Internal.item(), External, improvement,
+                        % (t+1 if t>0 else t, loss.item(), Internal.item(), External.item(), improvement,
                         (time.time() - it_time))
                 self.sig, self.elements_energy_dens = self.cal_sigma(F)
                 self.F = F

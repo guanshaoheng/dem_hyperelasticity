@@ -112,7 +112,7 @@ class Torch_Lagrange:
     
     def cal_sigma(self, F):
         """
-            势能方程参考：https://en.wikipedia.org/wiki/Neo-Hookean_solid
+            势能方程参考: https://en.wikipedia.org/wiki/Neo-Hookean_solid
         """
         # F.requires_grad= True
         J = torch.linalg.det(F)

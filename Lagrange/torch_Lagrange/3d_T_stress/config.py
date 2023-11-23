@@ -33,12 +33,12 @@ init_x, init_y = 0.1, 0.6
 
 known_left_ux = 0
 known_left_uy = 0
-known_left_uz = 5
+known_left_uz = 0
 bc_left_penalty = 1.0
 
-known_right_ux = 0.
+known_right_ux = 5.0
 known_right_uy = 0.0
-known_right_uz = -5.
+known_right_uz = 0.
 
 known_top_tx =  2000.
 known_top_ty =     0.
@@ -75,7 +75,7 @@ hy_test = ly/(ny_test-1)
 hz_test = lz/(nz_test-1)
 
 # ------------------------------ filename output ----------------------------------------------------
-filename_out = f"./Tshape_3D_displace_" + \
+filename_out = f"./Tshape_3D_TopStress{abs(known_top_tx):.0f}_" + \
     f"E{E:.0e}_nu{nu:.0e}" 
 
 if not os.path.exists(filename_out):
