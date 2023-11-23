@@ -20,6 +20,11 @@ dh = 16.7e-5*2.
 m = 1.0
 g= 9.8
 
+# 肌肉纤维方向 
+theta = 0.
+phi = 0.
+helth_coefficient = 0.  # 1.0 表示完全健康，0.0表示完全损坏
+integration_method = "simpson"  # simpson trapezoidal 积分计算方法 
 # ----------------------------- define structural parameters ---------------------------------------
 lx = Length = 1.0
 ly = Height = 1.0
@@ -31,13 +36,14 @@ known_left_uy = 0
 known_left_uz = 0
 bc_left_penalty = 1.0
 
-known_right_ux = -0.1
-known_right_uy = 0.05
+known_right_ux = 5.0
+known_right_uy = 0.0
 known_right_uz = 0.
 
-known_right_tx = 0.
-known_right_ty = 0.
-known_right_tz = 0.
+known_top_tx =  2000.
+known_top_ty =     0.
+known_top_tz = -2000.
+
 bc_right_penalty = 1.0
 
 # 将位移在1000个荷载步上逐渐施加上去
@@ -69,7 +75,7 @@ hy_test = ly/(ny_test-1)
 hz_test = lz/(nz_test-1)
 
 # ------------------------------ filename output ----------------------------------------------------
-filename_out = f"./beam{int(Nx):d}x{int(Ny):d}x{int(Nz):d}_" + \
+filename_out = f"./Tshape_3D_TopStress{abs(known_top_tx):.0f}_" + \
     f"E{E:.0e}_nu{nu:.0e}" 
 
 if not os.path.exists(filename_out):

@@ -40,9 +40,8 @@ known_right_ux = 5.0
 known_right_uy = 0.0
 known_right_uz = 0.
 
-known_right_tx = 0.
-known_right_ty = 0.
-known_right_tz = 0.
+known_top_tx = -1000.
+
 bc_right_penalty = 1.0
 
 # 将位移在1000个荷载步上逐渐施加上去
@@ -74,7 +73,7 @@ hy_test = ly/(ny_test-1)
 hz_test = lz/(nz_test-1)
 
 # ------------------------------ filename output ----------------------------------------------------
-filename_out = f"./Tshape_2D_{int(Nx):d}x{int(Ny):d}x{int(Nz):d}_" + \
+filename_out = f"./Tshape_2D_TopStress{abs(known_top_tx):.0f}_" + \
     f"E{E:.0e}_nu{nu:.0e}" 
 
 if not os.path.exists(filename_out):
