@@ -83,6 +83,30 @@ where $\rho_i = \rho(\mathrm{N_i})$ is the weights in direction \mathrm{N_i}.
 ## LEM
 
 
+## Simulation results
+
+### Orientation of the fibre direction
+Here compared the results with different fiber directions.
+
+| Fig DEM simulation results with different fibre orientations | Fig LEM simulation results with different fibre orientations |
+| :---: | :---: |
+| ![Alt text](figs/normalNet_tx_health1.0_orientationComparison.png) | ![Alt text](figs/fem_tx_health1.0_orientationComparison.png) |
+
+### Different healh coefficients
+
+| Fig DEM simulation results with different health coefficients ($0.2, 0.4, 0.6$ from top to bottom) | Fig LEM simulation results with different health coefficients ($0.2, 0.4, 0.6$ from top to bottom) |
+| :---: | :---: |
+| ![Alt text](figs/normalNet_tx_orientation0_healthComparison0.2.4.6.png) | ![Alt text](figs/fem_tx_orientation0_healthComparison.2.4.6.png) |
+
+
+### Random field of health coeffcient
+
+| Fig Comparison between DEM and LEM with different random field of health coefficients | Fig Comparison between DEM and LEM with different random field of health coefficients | Fig Comparison between DEM and LEM with different random field of health coefficients |
+| :---: | :---: | :---: |
+| ![Alt text](figs/net_fem_tx_randomHealth0.png) | ![Alt text](figs/net_fem_tx_randomHealth1.png) | ![Alt text](figs/net_fem_tx_randomHealth2.png) |
+
+
+
 
 ## Reference:
 - [1] Rolf-Pissarczyk, M., Li, K., Fleischmann, D., & Holzapfel, G. A. (2021). A discrete approach for modeling degraded elastic fibers in aortic dissection. Computer Methods in Applied Mechanics and Engineering, 373, 113511. https://doi.org/10.1016/j.cma.2020.113511
