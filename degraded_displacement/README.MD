@@ -6,16 +6,16 @@
 The stratch is applied on the x direction and the value is:  
 $$
 \epsilon_x = \frac{dx}{lx_0} = 0.5
-$$
+$$  
 The boundary conditions in the end of left side is applied by the distance function: 
 $$
 u(x) = NN(x) * x[:, 0]
-$$
+$$  
 
 In the end of right side, the boundary conditions are applied through the penalty term in the loss function:  
 $$
 L_{\mathrm{Dirichlet}} = penalty\cdot\left(NN(x)[\mathrm{rightEndIndex}] - u[\mathrm{rightEndIndex}]\right)^2
-$$
+$$  
 
 
 ## values of the penalties
