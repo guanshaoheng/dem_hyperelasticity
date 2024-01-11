@@ -1,5 +1,0 @@
-Adam
-Iter: 2000 Loss: -5.259298325e+00 Energy: -5.259298325e+00 Boundary: 0.000000000e+00 Time: 1.670e-02
-
-LBFGS
-Iter: 60 Loss: -5.419971466e+00 Energy: -5.419971466e+00 Boundary: 0.000000000e+00 Time: 1.843e-02

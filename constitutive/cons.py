@@ -1,17 +1,19 @@
 import torch
 import numpy as np
-from constitutive.utils_cons import rotation_matrix
+from constitutive.utils_cons import rotation_matrix, read_integration_sphere
 
 
 class DegradedCons:
-    def __init__(self, theta: float, phi: float, 
-                 K: float=8e9, mu: float=62.1e3, c1: float=56.59e3, c2:float=3.83, failure: float=1.0,
-                 num_pieces: int=5) -> None:
+    def __init__(
+            self, 
+            theta: float, phi: float, 
+            K: float=500e3, mu: float=62.1e3, c1: float=56.59e3, c2:float=3.83, healthy_ratio: float=1.0, be: float=1.0,
+            device=torch.device("cpu") ) -> None:
         """
             用于3D求解, 此处只将弹性纤维进行积分，没有考虑蛋白质纤维
-            theta: 纤维的方向 rad 弧度 极角
+            theta: 纤维的方向 rad 弧度 极角, 0的时候为极轴（z轴）方向，pi/2的时候方向在xy平面内
             phi: 纤维的方向 rad 弧度 方位角
-            failure: 1.0健康 0.0完全破坏
+            healthy_ratio: 1.0健康 0.0完全破坏
             K: 体积模量
             mu: 剪切模量
             c1: 弹性纤维参数 
@@ -20,67 +22,52 @@ class DegradedCons:
             num_pieces: 进行积分时将0.5 pi分成num_pieces份
         """
 
-        # 材料参数
-        self.K = K   # 体积模量 bulk modulus
-        self.mu = mu # 剪切模量
-        self.c1, self.c2 = c1, c2
-        self.failure = failure  # 破坏参数，当failure为0则完全破坏，1为健康
-        self.failure_rad = failure * np.pi*0.5
-        self.theta = torch.tensor(theta, dtype=torch.float32)
-        self.phi = torch.tensor(phi, dtype=torch.float32)
-        self.kronecker = torch.eye(3)
-        self.p = 0.5 * (torch.einsum("ik, jl->ijkl", self.kronecker, self.kronecker) + 
-                        torch.einsum("il, jk->ijkl", self.kronecker, self.kronecker)) - \
-                (torch.einsum("ij, kl->ijkl", self.kronecker, self.kronecker))/3.0
+        # computational device
+        self.device = device
 
+        # 材料参数
+        self.K = K   # 体积模量 bulk modulus used as the bulk deformation penalty
+        self.mu = mu # 剪切模量
+        self.c1, self.c2, self.be = c1, c2, be
+        self.healthy_ratio = healthy_ratio  # 破坏参数，当healthy_ratio为0则完全破坏，1为健康
+        self.healthy_ratio_rad = self.healthy_ratio * np.pi*0.5
+        self.theta = torch.tensor(theta, dtype=torch.float32, device=self.device)
+        self.phi = torch.tensor(phi, dtype=torch.float32, device=self.device)
+        self.kronecker = torch.eye(3, device=self.device)
+        # self.p = 0.5 * (torch.einsum("ik, jl->ijkl", self.kronecker, self.kronecker) + 
+        #                 torch.einsum("il, jk->ijkl", self.kronecker, self.kronecker)) - \
+        #         (torch.einsum("ij, kl->ijkl", self.kronecker, self.kronecker))/3.0
 
         # 计算纤维方向矩阵
-        self.N = self.get_direction_vector(theta=self.theta, phi=self.phi)
-        self.R = rotation_matrix(theta=self.theta, phi=self.phi)
+        # self.N = self.get_direction_vector(theta=self.theta, phi=self.phi)
+        self.R = rotation_matrix(theta=self.theta, phi=self.phi, device=self.device)
         # self.NxN = torch.ger(self.N, self.N)
 
-        # 积分计算设置
-        self.num_pieces = num_pieces  # 将90度切分为3份，在每份的形心处积分
-        num_integration_phi = 4
-        self.num_integration_points = self.num_pieces**2*num_integration_phi
-        self.dh = 0.5*torch.pi/self.num_pieces
-        num_theta = self.num_pieces                      # 90 度
-        num_phi = self.num_pieces*num_integration_phi    # 360 度
-        self.theta_list = torch.linspace(0.5*self.dh, 0.5 * np.pi-0.5*self.dh, num_theta)
-        self.phi_list = torch.linspace(0.5*self.dh, num_integration_phi * 0.5 * np.pi-0.5*self.dh, num_phi)
-        self.theta_mesh, self.phi_mesh = torch.meshgrid(self.theta_list, self.phi_list)
-        self.healthy = torch.where(self.theta_mesh<self.failure_rad, 1., 0.)
-        self.N_integration_points = self.get_direction_vector_tensor(self.theta_mesh, self.phi_mesh)
-        self.weights_of_fiber = self.weight_on_spere(theta=self.theta_mesh)
-        self.ds_weights_fiber = self.dh**2*torch.sin(self.theta_mesh)*self.weights_of_fiber
-        self.norm = torch.sum(self.ds_weights_fiber)
-
-    def total_energy(self, F: torch.Tensor):
-        """
-            F: 变形张量，形状为 3x3
-        """
-        J = torch.det(F)
-        F_ = J ** (-1/3) * F
-        C_ = torch.matmul(F_.T, F_)
-        I1_ = torch.trace(C_)
-
-        return self.get_volumetric_engergy(J=J) + \
-                self.get_shear_energy(I1_=I1_) + self.get_integrated_energy(C_=C_)
-                    #self.get_integrated_energy(C_=C_)
+        # --- integration configutation --- 
+        # read from the integration sphere
+        integration_areas, integration_centres = read_integration_sphere()
+        self.integration_areas, self.integration_centres = integration_areas.to(self.device), integration_centres.to(self.device) 
+        self.healthy_ = torch.where(self.integration_centres[:, 2]> np.cos(self.healthy_ratio_rad), 1., 0.)
+        self.weights_of_fiber_ = self.weight_on_spere_cos(cos_theta=self.integration_centres[:, 2])
+        self.ds_weights_fiber_ = self.weights_of_fiber_ * self.integration_areas
+        self.ds_weights_fiber_normed_ = self.ds_weights_fiber_ / torch.sum(self.ds_weights_fiber_)
 
     def total_energy_batch(self, F: torch.Tensor):
-        #TODO
         """
             F: 一个batch的变形张量 形状为 (batach_size, 3, 3)
         """
         J = torch.det(F)
-        F_ = torch.einsum("n, nij->nij", J ** (-1/3), F) 
-        C_ = torch.einsum("nji, njk->nik", F_, F_) 
+        # J = torch.einsum("nii->n", F)-2.  # small deformation assumption
+        F_ = torch.einsum("n, nij->nij", J ** (-1/3), F)
+        C_ = torch.einsum("nji, njk->nik", F_, F_)
         I1_ = torch.einsum("nii->n", C_)
 
-        return self.get_volumetric_engergy(J=J) + self.get_shear_energy(I1_=I1_) + self.get_integrated_energy_batch(C_=C_)
-                    
+        en_vol = self.get_volumetric_engergy(J=J)
+        en_ground = self.get_shear_energy(I1_=I1_)
+        en_integrated = self.get_integrated_energy_batch(C_=C_)
 
+        return  en_vol + en_ground + en_integrated
+                    
     def get_dev(self, t):
         return t- torch.eye(3)*torch.trace(t)/3.
 
@@ -88,12 +75,14 @@ class DegradedCons:
         return self.K * (J**2 - 1. - 2 * torch.log(J))
     
     def get_shear_energy(self, I1_):
-        return self.mu * (I1_ - 3.0) * 0.5
+        return 0.5 * self.mu * (I1_ - 3.0)
     
-    def get_integrated_energy(
-            self, 
-            C_: torch.Tensor):
+
+    def get_integrated_energy_batch(self, C_: torch.Tensor)->torch.Tensor:
         r"""
+            calculate the energy from the elastic fiber
+            C_: 一个batch的C_ 形状为 (batch_size, 3, 3)
+
             计算在球面的能量积分 根据公式12
 
             E_R 就是 self.N
@@ -106,79 +95,62 @@ class DegradedCons:
 
             如果取 num_pieces 总共需要计算的点的个数为 4 * num_pices**2
         """
-        sum = 0.
-        # sum_norm = 0.
         # 旋转到以纤维方向为z轴的坐标系后的 C_
-        C_rotated = torch.einsum("ij, jk, lk->il", self.R, C_, self.R)
-        # check_R = torch.einsum("ij, kj->ik", self.R, self.R)
-        for i in self.theta_list[:-1]:
-            # NOTE: use the mid points of the square
-            theta=i+0.5*self.dh
-            weights = self.weight_on_spere(theta)
-            ds = weights *self.dh**2*torch.sin(theta)
-            for j in self.phi_list[:-1]:
-                # NOTE: use the mid points of the square
-                phi=j+0.5*self.dh
-                N_tmp = self.get_direction_vector(theta=theta, phi=phi)
-                # 计算以该方向为纤维纤维方向得到的I4_
-                I4_ = torch.einsum("ij, i, j->", C_rotated, N_tmp, N_tmp)
-                # 计算能量密度，同时还要乘上概率密度
-                sum += self.get_engergy_density(I4_=I4_, theta=theta) * ds
-                # sum_norm += ds
-        # print(sum_norm)
-        # sum /= sum_norm
+        # 以纤维的主方向为z轴进行积分
+        C_rotated = torch.einsum("ij, njk, lk->nil", self.R, C_, self.R)  # rotate the tensor to the z axis
+        I4_ = torch.einsum("qij, ni, nj->qn", C_rotated, self.integration_centres, self.integration_centres)
+        energy_density_n_ = torch.where(I4_>=1.0, 1.0, 0.) * self.healthy_ * self.fen(I4_)
+        energy_density_ = torch.sum(self.ds_weights_fiber_normed_ * energy_density_n_, axis=[1])
+        
+        return energy_density_
 
-        """
-            norm number 是密度函数在整个积分域算出来的
-                  ans         norm   0.3  0.23
-            90   5.387       2.3495
-            180  429.4894    4.6990
-            360  429.4893    9.3979
-
-                  ans         norm   0.3  0.23
-            90   10.5193     2.3495
-            180  45.7640     4.6990
-            360  429.4893    9.3979
-
-        """
-        return sum/9.3979
-    
-
-    def get_integrated_energy_batch(self, C_: torch.Tensor)->torch.Tensor:
-        """
-            C_: 一个batch的C_ 形状为 (batch_size, 3, 3)
-        """
-        C_rotated = torch.einsum("ij, njk, lk->nil", self.R, C_, self.R)
-        I4_ = torch.einsum("qij, mni, mnj->qmn", C_rotated, self.N_integration_points, self.N_integration_points)
-        energy_density_n = torch.where(I4_>=1.0, 1.0, 0.) * self.healthy * self.fen(I4_)
-        energy_density = torch.sum(self.ds_weights_fiber * energy_density_n, axis=[1, 2])
-        return energy_density/self.norm
-
-    
-    def weight_on_spere(self, theta: torch.Tensor, be:float=1.0)-> torch.Tensor:
+    def weight_on_spere(self, theta: torch.Tensor)-> torch.Tensor:
             
-        return torch.exp(be * torch.cos(theta)**2)
+        return torch.exp(self.be * torch.cos(theta)**2)
+    
+    def weight_on_spere_cos(self, cos_theta: torch.Tensor)->torch.Tensor:
+        return torch.exp(self.be * cos_theta**2)
 
     def get_engergy_density(self, I4_, theta: float):
         """
             C_ 拉伸的值的平方, 是一个torch tensor, 与网络的位移预测值有关
             theta rad 当前积分点的极角
-            self.failure rad 破坏的极角, 大于该角的弹性纤维不计算
+            self.healthy_ratio rad 破坏的极角, 大于该角的弹性纤维不计算
         """
-        if theta<self.failure_rad and I4_>1.:
+        if theta<self.healthy_ratio_rad and I4_>1.:
             return self.fen(I4_)
         else: return  0. 
     
     def fen(self, I4_):
+        # """
+        #     refer to Li's paper Eq. 3.2  &  Eq. 3.3
+        #         A discrete fibre dispersion method for excluding fibres 
+        #         under compression in the modelling of fibrous tissues
+
+        #         for Eq. 3.3 mu = 5e3 v=10e3 be=2.9
+
+        # """
+        # return self.k1/self.k2/2. * torch.exp(self.k2 * (I4_-1) ** 2 -1.)  # Eq. 3.2 
+        # return 0.5 * self.mu * (I4_ - 1) ** 2  # Eq. 3.3
+        """
+            refer to Malte's paper Eq. 35
+                A discrete approach for modeling degraded elastic fibers in aortic dissection
+            c1 = 56.59e3 c2=3.83 be=0.01
+
+        """
         return self.c1/self.c2 * (I4_**(self.c2*0.5)-1.0) - self.c1 * torch.log(I4_) * 0.5
     
-    def get_direction_vector(self, theta: float, phi: float)->torch.Tensor:
-        return torch.tensor([
+    def get_direction_vector(self, theta: torch.Tensor, phi: torch.Tensor)->torch.Tensor:
+        """
+            theta: in shape of [num_samples,]
+            phi:   in shape of [num_samples,]
+        """
+        return torch.stack([
             torch.sin(theta) * torch.cos(phi), 
             torch.sin(theta)*torch.sin(phi), 
-            torch.cos(theta)], dtype=torch.float32)
+            torch.cos(theta)]).permute(1, 0)
     
-    def get_direction_vector_tensor(self, theta: torch.tensor, phi: torch.tensor)->torch.Tensor:
+    def get_direction_vector_tensor(self, theta: torch.Tensor, phi: torch.Tensor)->torch.Tensor:
         """
             用来直接计算所有积分点的方向向量
         """
@@ -186,54 +158,6 @@ class DegradedCons:
             torch.sin(theta) * torch.cos(phi), 
             torch.sin(theta)*torch.sin(phi), 
             torch.cos(theta)]).permute(1, 2, 0)
-    
-    def get_cauchy_stress(self, F: torch.Tensor)->torch.Tensor:
-        """
-            计算该点的能量密度和应力张量
-
-            返回值：能量密度, 应力张量
-        """
-        F.requires_grad = True  #没有必要加这句话，应为已经要求 grad 了
-
-        # 变形张量和不变量
-        J = torch.det(F)
-        F_ = J ** (-1/3) * F
-        C_ = torch.matmul(F_.T, F_)
-        I1_ = torch.trace(C_)
-
-        # 体应变能量和剪应变能量
-        vol_energy = self.get_volumetric_engergy(J=J)
-        isochoric_energy = self.get_shear_energy(I1_=I1_) + self.get_integrated_energy(C_=C_)
-        total_energy  = vol_energy + isochoric_energy
-
-        # # 平均应力
-        # """
-        #  参考A new constitutive framework for arterial wall mechanics and a comparative study of material models 公式 (8)
-        # """
-        # p = torch.autograd.grad(
-        #     vol_energy, J, grad_outputs=torch.ones_like(vol_energy), 
-        #     create_graph=True, retain_graph=True)[0]
-        # # 偏应力计算
-        # """
-        #     参考 A discrete approach for modeling degraded elastic fibers in aortic dissection 公式 (20~26)
-        # """
-        # denergy_dC_ = 2.*torch.autograd.grad(
-        #     isochoric_energy, C_, grad_outputs=torch.ones_like(isochoric_energy), 
-        #     create_graph=True, retain_graph=True)[0]
-        # sigma_ = torch.einsum("ij, jk, lk->il", F_, denergy_dC_, F_)/J
-        # sigma_dev = torch.einsum("ijkl, kl->ij", self.p, sigma_)
-        # sigma = p*self.kronecker + sigma_dev
-
-        """
-            柯西应力计算
-        """
-        pk1 = torch.autograd.grad(
-            total_energy, F, grad_outputs=torch.ones_like(total_energy), 
-            create_graph=True, retain_graph=True)[0]
-        sigma_pk1 = 1/J * torch.einsum("ij, kj->ik", pk1, F)
-
-
-        return total_energy, sigma
 
     def get_cauchy_stress_batch(self, F: torch.Tensor)->torch.Tensor:
         """
@@ -247,6 +171,7 @@ class DegradedCons:
 
         # 变形张量和不变量
         J = torch.det(F)
+        # J = torch.einsum("nii->n", F)-2.  # small deformation assumption
         F_ = torch.einsum("n, nij->nij", J ** (-1/3), F) 
         C_ = torch.einsum("nji, njk->nik", F_, F_) 
         I1_ = torch.einsum("nii->n", C_)
@@ -265,17 +190,121 @@ class DegradedCons:
         pk1 = torch.autograd.grad(
             total_energy, F, grad_outputs=torch.ones_like(total_energy), 
             create_graph=True, retain_graph=True)[0]
+        
         sigma =  torch.einsum("n, nij, nkj->nik", 1./J, pk1, F)
+
+        F_inv = torch.inverse(F)
+        pk2 = torch.einsum("nij, njk->nik", F_inv, pk1)
        
-        return vol_energy+isochoric_energy, sigma
+        return vol_energy+isochoric_energy, sigma, pk1, pk2
+    
+
+class DegradedCons_different_health(DegradedCons):
+    """
+        include the random field of healthy_ratio;
+        healthy ratio: 1 -> totally healthy, 0 -> totally damaged 
+    """
+    def __init__(
+            self, 
+            healthy_ratio_tensor: torch.Tensor,
+            theta: float, phi: float,
+            K: float=500e3, mu: float=62.1e3, c1: float=56.59e3, c2:float=3.83, healthy_ratio: float=1.0,
+            device=torch.device("cpu")) -> None:
+        super().__init__(theta, phi, K, mu, c1, c2, healthy_ratio, device=device)
+        
+        self.healthy_ratio_rad = healthy_ratio_tensor.to(self.device) * np.pi * 0.5
+        # repeat the input points from shape [num_points, ] to [num_triangle_integrations, num_points]
+        tmp = self.integration_centres[:, 2].repeat(len(self.healthy_ratio_rad), 1 ).permute(1, 0)
+        # change into shape of [num_points, num_triangle_integrations]
+        self.healthy_ = torch.where(tmp > torch.cos(self.healthy_ratio_rad), 1., 0.).permute(1, 0)
+        """
+        finished: Check if the random field is correctly applied
+        from matplotlib import pyplot as plt
+        tmp = self.healthy_ratio_rad.detach().numpy().reshape(25, 25, 4) / 0.5/np.pi
+        plt.imshow(tmp); plt.colorbar(); plt.show()
+        """
+
+
+
+class NeoHooking():
+    def __init__(self, k: float, mu: float) -> None:
+        """
+        This simple constitutive model is to check if the stress on the 
+        right side boundary equals to the applied traction there.
+
+        Yes, the stress equals to the applied traction on the right bo-
+        undary.
+
+        Reference: https://en.wikipedia.org/wiki/Neo-Hookean_solid
+        
+        Parameteres:
+        - k: bulk modulus
+        - mu: shear modulus
+        """
+        self.k = k
+        self.mu = mu
+        self.lam = self.k - 2.*self.mu / 3.
+        self.c1 = 0.5 * self.mu
+        self.d1 = 0.5 * self.lam
+
+    def total_energy_batch(self, F: torch.Tensor) -> torch.Tensor:
+        """
+        Parameters:
+        - F: the deformation tensor in shape of [num_samples, 3, 3]
+
+        Returns:
+        - W: the energy in shape of [num_samples,]
+        """
+        J = torch.det(F)
+        C = torch.einsum("nji, njk->nik", F, F)
+        I = torch.einsum("nii->n", C)
+        W = self.c1 * (I - 3. - 2.*torch.log(J)) + self.d1 * (J - 1.0)**2
+        return W
+    
+    def get_cauchy_stress_batch(self, F: torch.Tensor) -> torch.Tensor:
+        """
+        Parameters:
+        - F
+
+        Returns:
+        - W: elastic energy 
+        - sigma: Cauchy stress
+        - pk1: first Piola-Kirchhoff stress in shape of [num_samples, 3, 3]
+        - pk2: second Piola-Kirchhoff stress in shape of [num_samples, 3, 3]
+        """
+        J = torch.det(F)
+        W = self.total_energy_batch(F)
+        pk1 = torch.autograd.grad(
+            W, F, grad_outputs=torch.ones_like(W), 
+            create_graph=True, retain_graph=True)[0]
+        
+        sigma =  torch.einsum("n, nij, nkj->nik", 1./J, pk1, F)
+
+        F_inv = torch.inverse(F)
+        pk2 = torch.einsum("nij, njk->nik", F_inv, pk1)
+       
+        return W, sigma, pk1, pk2
+        
+        
     
 
 if __name__ == "__main__":
-    obj = DegradedCons(theta=np.pi*0.3, phi=np.pi*0.23, failure=1.0)
-    F = torch.diag(torch.tensor([0.95, 0.95, 1.2], dtype=torch.float32))
+
+    # check the basic class (DegradedCons)
+    obj = DegradedCons(theta=0.3 * np.pi*0.5, phi=0.23 * np.pi*0.5, healthy_ratio=1.0)
+    F = torch.diag(torch.tensor([0.9, 0.9, 1.2], dtype=torch.float32)).reshape(1, 3, 3)
     F.requires_grad = True
-    energy = obj.total_energy(F = F)
-    energyy, sigma = obj.get_cauchy_stress_batch(F = F.reshape(1, 3, 3))
+    energy = obj.total_energy_batch(F = F)
+    energyy, sigma, pk1, pk2 = obj.get_cauchy_stress_batch(F = F.reshape(1, 3, 3))
+
+    #  check the DegradedCons_different_health class
+    n_integration_points = 99
+    obj_different_health = DegradedCons_different_health(
+        healthy_ratio_tensor=torch.rand([n_integration_points]),
+        theta=0.5 * np.pi*0.3, phi=0.5 * np.pi*0.23)
+    energy_different = obj_different_health.total_energy_batch(F.repeat(n_integration_points, 1, 1))
+
+
     print()
 
 

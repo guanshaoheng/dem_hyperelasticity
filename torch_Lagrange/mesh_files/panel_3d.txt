@@ -1,0 +1,42 @@
+// 形状参数
+lx=2/100;
+ly=2/100;
+lz=0.25/100;
+
+// 单元边长
+l = 0.00125;
+
+// 定义点
+Point(1) = { 0, 0, 0, l};
+Point(2) = { lx, 0, 0, l};
+Point(3) = { lx, ly, 0, l};
+Point(4) = { 0,  ly, 0, l};
+
+// 定义线
+Line(1) = {1, 2};
+Line(2) = {2, 3};
+Line(3) = {3, 4};
+Line(4) = {4, 1};
+
+// 定义表面
+Line Loop(1) = {1, 2, 3, 4};
+Plane Surface(1) = {1};
+
+// 拉伸表面以创建体积
+Extrude {0, 0, lz} {
+    Surface{1}; 
+}
+
+// 网格划分
+Mesh.Algorithm = 1;  // 指定网格算法，例如Delaunay（1）
+Mesh.Algorithm3D = 1;  // 3D网格算法，例如Delaunay（1）
+
+// 网格尺寸（可选，用于调整网格密度）
+// Mesh.CharacteristicLengthMin = 2.0;
+// Mesh.CharacteristicLengthMax = 2.0;
+
+// 生成网格
+Mesh 3;
+
+// 保存网格到文件
+Save "panel_3d.msh";

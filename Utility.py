@@ -1,5 +1,5 @@
 from import_file import *
-import scipy.integrate as sp
+# import scipy.integrate as sp
 
 
 # convert numpy BCs to torch
@@ -27,19 +27,27 @@ def write_vtk(filename, x_space, y_space, z_space, Ux, Uy, Uz):
 # purpose: doing something in post processing for visualization in 3D
 # --------------------------------------------------------------------------------
 def write_vtk_v2(
-    filename, x_space, y_space, z_space, U, S11, S12, S13, S22, S23, S33, E11, E12, E13, E22, E23, E33, SVonMises, ):
+    filename, x_space, y_space, z_space, U, S11, S12, S13, S22, S23, S33, E11, E12, E13, E22, E23, E33, SVonMises, 
+    E11_cauchy, E12_cauchy, E13_cauchy, E22_cauchy, E23_cauchy, E33_cauchy):
     xx, yy, zz = np.meshgrid(x_space, y_space, z_space)
     gridToVTK(filename + "_deformed", xx + U[0], yy + U[1], zz + U[2],
         pointData={
-            "displacement": U, "S-VonMises": SVonMises, 
-            "S11": S11, "S12": S12, "S13": S13, "S22": S22, "S23": S23, "S33": S33, "E11": E11, "E12": E12, "E13": E13, "E22": E22, "E23": E23, "E33": E33,
-            "volumetric_strain": E11+E22+E33})
+            "displacement": U, 
+            "S-VonMises": SVonMises, 
+            "S11": S11, "S12": S12, "S13": S13, "S22": S22, "S23": S23, "S33": S33, 
+            "sig_v": (S11+S22+S33)/3.,
+            "E11": E11, "E12": E12, "E13": E13, "E22": E22, "E23": E23, "E33": E33,
+            "eps_v": E11+E22+E33,
+            "E11cauchy": E11_cauchy, "E12cauchy": E12_cauchy, "E13cauchy": E13_cauchy, "E22cauchy": E22_cauchy, "E23cauchy": E23_cauchy, "E33cauchy": E33_cauchy,
+            "eps_v_cauchy": E11_cauchy+E22_cauchy+E33_cauchy,
+            })
     gridToVTK(
         filename,
         xx, yy, zz,
         pointData={
             "displacement": U, "S-VonMises": SVonMises, 
-            "S11": S11, "S12": S12, "S13": S13, "S22": S22, "S23": S23, "S33": S33, "E11": E11, "E12": E12, "E13": E13, "E22": E22, "E23": E23, "E33": E33,
+            "S11": S11, "S12": S12, "S13": S13, "S22": S22, "S23": S23, "S33": S33, 
+            "E11": E11, "E12": E12, "E13": E13, "E22": E22, "E23": E23, "E33": E33,
         },
     )
 
@@ -200,3 +208,17 @@ def cal_jacobian(inputs, outputs):
         ],
         dim=-1,
     ).permute(0, 2, 1)
+
+
+def get_torch_device():
+    dev = torch.device('cpu')
+    if torch.cuda.is_available():
+        print("\n" + "="*60)
+        print("CUDA is available, running on GPU")
+        dev = torch.device('cuda')
+        print(torch.cuda.get_device_properties(dev))
+        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+        print("="*60 + "\n")
+    else:
+        print("CUDA not available, running on CPU")
+    return dev
