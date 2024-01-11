@@ -92,11 +92,12 @@ Here compared the results with different fiber directions.
 | :---: | :---: |
 | ![Alt text](figs/normalNet_tx_health1.0_orientationComparison.png) | ![Alt text](figs/fem_tx_health1.0_orientationComparison.png) |
 
+
 ### Different healh coefficients
 
 | Fig DEM simulation results with different health coefficients ($0.2, 0.4, 0.6$ from top to bottom) | Fig LEM simulation results with different health coefficients ($0.2, 0.4, 0.6$ from top to bottom) |
 | :---: | :---: |
-| ![Alt text](./figs/normalNet_tx_orientation0_healthComparison0246.png) | ![Alt text](./figs/fem_tx_orientation0_healthComparison0246.png) |
+| ![Alt text](figs/normalNet_tx_orientation0_healthComparison0246.png) | ![Alt text](figs/fem_tx_orientation0_healthComparison0246.png) |
 
 
 ### Random field of health coeffcient
