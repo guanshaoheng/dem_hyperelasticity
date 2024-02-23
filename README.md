@@ -175,19 +175,36 @@ where $\mathbf{X}$ is the coordinates of the original configuration. Then the de
 $$
 \Pi_{\mathrm{int}} = \int_{\Omega} \Psi(F) d\Omega
 $$
-and the extenal potenial is calculated as:  
+
+
+### Boudnary conditions  
+
+There are two kinds of boundary conditions: Dirichlet boundary and Neuemann boudary.
+In context of mechanics, the firts can also be named as displacement boudanry conditions, and the second one is the traction applied on the boundary.
+
+For the **Neuemann condition**, it can be applied by adding the external work of the traction as a penalty term to the loss function. If there is a body force $\mathbf{f}_b$ influcing the whole domain and a traction $\mathbf{t}$ on boundary $\Gamma_T$, then the extenal work caused by the $t$ can be integrated as:  
 $$
 \Pi_{\mathrm{ext}} = \int_{\Omega} \mathbf{f}_b \cdot \hat{\mathbf{u}} d \Omega
  +  \int_{\Gamma_t} \mathbf{t} \cdot \hat{\mathbf{u}} d \Gamma
 $$
 where $\mathbf{f}_b$ is the body force, $\mathbf{t}$ is the traction on the boundary.
 
+However, it is not easy to accurately apply the Dirichlet boundary conditons. Currently, **[Reference]**, the most common way to apply the boudary condition here is to add a weighted penalty to the function. The term is defined as:  
+$$
+\Pi_{\mathrm{u}} = \gamma \int_{\Gamma_u} (u - \hat{u})^2 d \Gamma
+$$
+
+
 
 ## LEM
 
-**TODO MESH SENSITIVITY AND CONVERGENCE**
+It is difficult to apply Dirichlet (essential) boundary conditions within the DEM framework.
 
-**Malte's opinions**
+### **TODO MESH SENSITIVITY AND CONVERGENCE**
+
+### **Malte's opinions**
+
+
 
 
 ## Simulation results
@@ -224,4 +241,4 @@ Here compared the results with different fiber directions.
 ## Reference:
 - [1] Rolf-Pissarczyk, M., Li, K., Fleischmann, D., & Holzapfel, G. A. (2021). A discrete approach for modeling degraded elastic fibers in aortic dissection. Computer Methods in Applied Mechanics and Engineering, 373, 113511. https://doi.org/10.1016/j.cma.2020.113511
 - [2] Holzapfel, G. A., Gasser, T. C., & Ogden, R. W. (2000). A new constitutive framework for arterial wall mechanics and a comparative study of material models. Journal of Elasticity, 61(1–3), 1–48. https://doi.org/10.1023/A:1010835316564
-- A New Constitutive Framework for Arterial Wall Mechanics and a Comparative Study of Material Models, https://link.springer.com/article/10.1023/A:1010835316564
+- [3] A New Constitutive Framework for Arterial Wall Mechanics and a Comparative Study of Material Models, https://link.springer.com/article/10.1023/A:1010835316564
