@@ -25,7 +25,9 @@ $$
 It can be simplified to $\mathbf{E} = \frac{1}{2} \left( \mathbf{F} + \mathbf{F}^T \right) - \mathbf{I}$ if the infinitesimal strain assumption is applied. However, the deformation for soft tissues are generally large and can not be assumed as infinitesimal issue. So the classic Green-Lagrangian strain tensor is used in this work.
 
 The volumetric strain can be evaluated as the determinant of the deformation tensor as: 
-$$\epsilon_V = \det{\mathbf{F}}-1$$  
+$$
+\epsilon_V = \det{\mathbf{F}}-1
+$$  
 The material is assumed to be incompressible ($\epsilon_V \equiv 0$) so that the determinant of the deformation tensor should always be 1 ($J = \det{F} \equiv 1$);
 
 Then the deformation tesnor is decoupled into a volumetric (dilatational) part $J$ and an isochoric (distortional) part:  
